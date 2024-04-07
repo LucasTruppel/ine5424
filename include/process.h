@@ -124,6 +124,7 @@ protected:
     Queue * _waiting;
     Thread * volatile _joining;
     Queue::Element _link;
+    Microsecond _exec_start = 0U;
 
     static bool _not_booting;
     static volatile unsigned int _thread_count;

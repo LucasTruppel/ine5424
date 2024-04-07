@@ -30,8 +30,8 @@ TRAITS		= $(APP)/$(APPLICATION)/$(APPLICATION)_traits.h
 ia32_PREFIX	:= /usr/bin/x86_64-linux-gnu-
 armv7_PREFIX	:= /usr/bin/arm-none-eabi-
 armv8_PREFIX	:= /usr/bin/aarch64-linux-gnu-
-rv32_PREFIX	:= /usr/bin/riscv64-linux-gnu-
-rv64_PREFIX	:= /usr/bin/riscv64-linux-gnu-
+rv32_PREFIX	:= /usr/local/riscv/bin/riscv64-unknown-linux-gnu-
+rv64_PREFIX	:= /usr/local/riscv/bin/riscv64-unknown-linux-gnu-
 
 # Make basic commands
 DD              = dd

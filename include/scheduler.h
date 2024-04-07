@@ -90,6 +90,7 @@ public:
     void queue(unsigned int q) {}
 
     bool update() { return false; }
+    bool update_on_reschedule(const Microsecond & exec_start) { return false;}
 
     bool collect(bool end = false) { return false; }
     bool charge(bool end = false) { return true; }
@@ -206,6 +207,25 @@ public:
     EDF(const Microsecond & d, const Microsecond & p = SAME, const Microsecond & c = UNKNOWN, unsigned int cpu = ANY);
 
     void update();
+};
+
+class LLF: public Real_Time_Scheduler_Common
+{
+public:
+    static const bool timed = true;
+    static const bool dynamic = true;
+    static const bool preemptive = true;
+
+public:
+    LLF(int p = APERIODIC): Real_Time_Scheduler_Common(p), _wcet(UNKNOWN) {}
+    LLF(const Microsecond & d, const Microsecond & wcet, const Microsecond & p = SAME, const Microsecond & c = UNKNOWN, unsigned int cpu = ANY);
+
+    void update();
+    void update_on_reschedule(const Microsecond & exec_start);
+
+public:
+    Microsecond _wcet;
+
 };
 
 __END_SYS

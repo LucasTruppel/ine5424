@@ -3,6 +3,8 @@
 #include <machine.h>
 #include <system.h>
 #include <process.h>
+#include <time.h>
+
 
 __BEGIN_SYS
 
@@ -303,7 +305,9 @@ void Thread::reschedule()
     assert(locked()); // locking handled by caller
 
     Thread * prev = running();
+    prev->criterion().update_on_reschedule(prev->_exec_start);
     Thread * next = _scheduler.choose();
+    next->_exec_start = Alarm::elapsed();
 
     dispatch(prev, next);
 }
