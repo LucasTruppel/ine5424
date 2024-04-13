@@ -180,9 +180,9 @@ MACH_IMGSUFF            := $($(MACH)_IMG_SUFFIX)
 MACH_NIC                = $($(MACH)_NIC)
 
 ifeq ($(DEBUG),1)
-MACH_CC_FLAGS           := -gdwarf-2 -feliminate-unused-debug-symbols $(MACH_CC_FLAGS)
-MACH_CXX_FLAGS          := -gdwarf-2 -feliminate-unused-debug-symbols $(MACH_CXX_FLAGS)
-MACH_AS_FLAGS           := -gdwarf-2 $(MACH_AS_FLAGS)
+MACH_CC_FLAGS           := -g -gdwarf-2 -feliminate-unused-debug-symbols $(MACH_CC_FLAGS)
+MACH_CXX_FLAGS          := -g -gdwarf-2 -feliminate-unused-debug-symbols $(MACH_CXX_FLAGS)
+MACH_AS_FLAGS           := -g -gdwarf-2 $(MACH_AS_FLAGS)
 MACH_EMULATOR           := $(subst -m ,-gdb tcp::1235 -S -m ,$($(MACH)_EMULATOR))
 endif
 
