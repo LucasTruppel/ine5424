@@ -13,10 +13,26 @@ class Synchronizer_Common
 {
 protected:
     typedef Thread::Queue Queue;
+    typedef Thread::Criterion Criterion;
+
 
 protected:
-    Synchronizer_Common() {}
-    ~Synchronizer_Common() { begin_atomic(); wakeup_all(); end_atomic(); }
+    Synchronizer_Common(long size): _size(size) {
+        _thread_array = new Thread*[size];
+        _criterion_array = new Criterion*[size];
+        for (int i = 0; i < size; i++) {
+            _thread_array[i] = nullptr;
+            _criterion_array[i] = nullptr;
+        }
+    }
+    
+    ~Synchronizer_Common() { 
+        begin_atomic(); 
+        wakeup_all(); 
+        end_atomic();
+        delete[] _thread_array;
+        delete[] _criterion_array;
+    }
 
     // Atomic operations
     bool tsl(volatile bool & lock) { return CPU::tsl(lock); }
@@ -31,8 +47,54 @@ protected:
     void wakeup() { Thread::wakeup(&_queue); }
     void wakeup_all() { Thread::wakeup_all(&_queue); }
 
+    // TODO change name
+    void insert() {
+        Thread* current_thread = Thread::running();
+        for (int i = 0; i <_size; i++) {
+            if (_thread_array[i] == nullptr) {
+                _thread_array[i] = current_thread;
+                break;
+            }
+        }
+    }
+
+    void ceiling() {
+        Thread* current_thread = Thread::running();
+        for (int i = 0; i <_size; i++) {
+            if (_thread_array[i] == nullptr) {
+                _thread_array[i] = current_thread;
+                return;
+            }
+        }
+        for (int i = 0; i < _size; i++) {
+            if (current_thread->priority() <= _thread_array[i]->priority()
+                && _thread_array[i]->priority() != Criterion::CEILING) {
+                _criterion_array[i] = &_thread_array[i]->criterion();
+                _thread_array[i]->priority(Criterion::CEILING);
+                return;
+            }
+        }
+    }
+
+    void restore_ceiling() {
+        Thread* current_thread = Thread::running();
+        if (current_thread->priority() == Criterion::CEILING) {
+            for (int i = 0; i < _size; i++) {
+                if (_thread_array[i] == current_thread) {
+                    _thread_array[i] = nullptr;
+                    current_thread->priority(*(_criterion_array[i]));
+                    _criterion_array[i] = nullptr;
+                    return;
+                }
+            }
+        }
+    }
+
 protected:
     Queue _queue;
+    Thread** _thread_array;
+    Criterion** _criterion_array;
+    long _size;
 };
 
 

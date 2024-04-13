@@ -25,6 +25,7 @@ class Scheduling_Criterion_Common
 public:
     // Priorities
     enum : int {
+        CEILING = -121212, //TODO Change to lowest value
         ISR    = -1000,
         MAIN   = -1,
         HIGH   = 0,
