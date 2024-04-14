@@ -92,10 +92,11 @@ Thread::~Thread()
     delete _stack;
 }
 
-
+// TODO think about lock/unlock and preemptive
+// TODO maybe change _link.rank(Criterion(c));
 void Thread::priority(const Criterion & c)
 {
-    lock();
+    // lock();
 
     db<Thread>(TRC) << "Thread::priority(this=" << this << ",prio=" << c << ")" << endl;
 
@@ -107,10 +108,10 @@ void Thread::priority(const Criterion & c)
     } else
         _link.rank(Criterion(c));
 
-    if(preemptive)
-        reschedule();
+    // if(preemptive)
+    //     reschedule();
 
-    unlock();
+    // unlock();
 }
 
 
