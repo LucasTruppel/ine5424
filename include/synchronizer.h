@@ -19,10 +19,8 @@ protected:
 protected:
     Synchronizer_Common(long size): _size(size) {
         _thread_array = new Thread*[size];
-        _criterion_array = new Criterion*[size];
         for (int i = 0; i < size; i++) {
             _thread_array[i] = nullptr;
-            _criterion_array[i] = nullptr;
         }
     }
     
@@ -31,7 +29,6 @@ protected:
         wakeup_all(); 
         end_atomic();
         delete[] _thread_array;
-        delete[] _criterion_array;
     }
 
     // Atomic operations
@@ -68,9 +65,8 @@ protected:
         for (int i = 0; i < _size; i++) {
             if (current_thread->priority() < _thread_array[i]->priority()
                 && _thread_array[i]->priority() != Criterion::CEILING) {
-                _criterion_array[i] = &_thread_array[i]->criterion();
-                _thread_array[i]->priority(Criterion::CEILING);
-                db<Synchronizer>(WRN) << "\nceiling applied!" ;
+                _thread_array[i]->apply_ceiling();
+                db<Synchronizer>(WRN) << "\nceiling applied!";
                 return;
             }
         }
@@ -83,9 +79,8 @@ protected:
         if (current_thread->priority() == Criterion::CEILING) {
             for (int i = 0; i < _size; i++) {
                 if (_thread_array[i] == current_thread) {
-                    _thread_array[i] = nullptr;
-                    current_thread->priority(*(_criterion_array[i]));
-                    _criterion_array[i] = nullptr;
+                    _thread_array[i]->restore_ceiling();
+                    db<Synchronizer>(WRN) << "\nceiling restored!";
                     return;
                 }
             }
@@ -96,7 +91,6 @@ protected:
 protected:
     Queue _queue;
     Thread** _thread_array;
-    Criterion** _criterion_array;
     long _size;
 };
 

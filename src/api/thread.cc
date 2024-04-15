@@ -92,28 +92,44 @@ Thread::~Thread()
     delete _stack;
 }
 
-// TODO think about lock/unlock and preemptive
-// TODO maybe change _link.rank(Criterion(c));
 void Thread::priority(const Criterion & c)
 {
-    // lock();
+    lock();
 
     db<Thread>(TRC) << "Thread::priority(this=" << this << ",prio=" << c << ")" << endl;
 
-    //TODO verify meaning of this
     if(_state != RUNNING) { // reorder the scheduling queue
         _scheduler.remove(this);
-        _link.rank(Criterion(c));
+        _link.rank(c);
         _scheduler.insert(this);
     } else
-        _link.rank(Criterion(c));
+        _link.rank(c);
 
-    // if(preemptive)
-    //     reschedule();
+    if(preemptive)
+        reschedule();
 
-    // unlock();
+    unlock();
 }
 
+void Thread::apply_ceiling()
+{
+    if(_state != RUNNING) { // reorder the scheduling queue
+        _scheduler.remove(this);
+        criterion().apply_ceiling();
+        _scheduler.insert(this);
+    } else
+        criterion().apply_ceiling();
+}
+
+void Thread::restore_ceiling()
+{
+    if(_state != RUNNING) { // reorder the scheduling queue
+        _scheduler.remove(this);
+        criterion().restore_ceiling();
+        _scheduler.insert(this);
+    } else
+        criterion().restore_ceiling();
+}
 
 int Thread::join()
 {

@@ -48,6 +48,10 @@ inline void exec_a()
        wait(thread_a, 'a', 1000);
     }
     cout << "\n" << "done waiting " << "a";
+    cout << "\n" << "a"
+    << "\t[p(A)=" << thread_a->priority()
+    << ", p(B)=" << thread_b->priority()
+    << ", p(C)=" << thread_c->priority() << "]";
 }
 
 inline void exec_b() 
@@ -60,6 +64,10 @@ inline void exec_b()
        wait(thread_b, 'b', 1000);
     }
     cout << "\n" << "done waiting " << "b";
+    cout << "\n" << "b"
+    << "\t[p(A)=" << thread_a->priority()
+    << ", p(B)=" << thread_b->priority()
+    << ", p(C)=" << thread_c->priority() << "]";
 }
 
 inline void exec_c() 
@@ -77,8 +85,8 @@ int main() {
 
     semaphore = new Semaphore(2);
 
-    thread_a = new Thread(Configuration(Thread::READY, Thread::LOW), &func_a);
-    thread_b = new Thread(Configuration(Thread::READY, Thread::LOW), &func_b);
+    thread_a = new Thread(Configuration(Thread::READY, Thread::NORMAL), &func_a);
+    thread_b = new Thread(Configuration(Thread::READY, Thread::NORMAL), &func_b);
     thread_c = new Thread(Configuration(Thread::READY, Thread::HIGH), &func_c);
 
     cout << "\n\n" << "inicio: "
