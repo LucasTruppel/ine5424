@@ -91,11 +91,10 @@ template <> struct Traits<Timer>: public Traits<Machine_Common>
     static const unsigned int UNITS = 1;
     static const unsigned int CLOCK = Traits<Machine>::RTCCLK;
 
-    // Meaningful values for the timer frequency range from 100 to 10000 Hz. The
-    // choice must respect the scheduler time-slice, i. e., it must be higher
+    // Run your application as profiler to find the frequency limit you must respect when executing.
+    // The choice must respect the scheduler time-slice, i. e., it must be higher
     // than the scheduler invocation frequency.
-    static const long FREQUENCY = 100; // Hz
-    // TODO find the correct value
+    static const long FREQUENCY = 200; // Hz
 };
 
 template <> struct Traits<UART>: public Traits<Machine_Common>

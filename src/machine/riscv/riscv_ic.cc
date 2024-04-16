@@ -12,6 +12,9 @@ __BEGIN_SYS
 
 PLIC::Reg32 PLIC::_claimed;
 IC::Interrupt_Handler IC::_int_vector[IC::INTS];
+unsigned long IC::interrupt_time = 0;
+unsigned long IC::last_interrupt_timestamp = 0;
+
 
 void IC::entry()
 {
@@ -39,10 +42,16 @@ void IC::dispatch()
         db<IC, System>(TRC) << "IC::dispatch(i=" << id << ") [sp=" << CPU::sp() << "]" << endl;
 
     if(id == INT_SYS_TIMER) {
+        if (profiler)
+            last_interrupt_timestamp = CLINT::mtime();
+        
         if(supervisor)
             CPU::ecall();   // we can't clear CPU::sipc(CPU::STI) in supervisor mode, so let's ecall int_m2s to do it for us
         else
             Timer::reset(); // MIP.MTI is a direct logic on (MTIME == MTIMECMP) and reseting the Timer seems to be the only way to clear it
+        
+        if (profiler)
+            interrupt_time += CLINT::mtime() - last_interrupt_timestamp;
     }
 
     _int_vector[id](id);
