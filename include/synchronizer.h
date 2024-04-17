@@ -44,9 +44,7 @@ protected:
     void wakeup() { Thread::wakeup(&_queue); }
     void wakeup_all() { Thread::wakeup_all(&_queue); }
 
-    // TODO change name
     void insert() {
-        db<Synchronizer>(WRN) << "\ninsert start"; // TODO change WRN to TRC
         Thread* current_thread = Thread::running();
         for (int i = 0; i <_size; i++) {
             if (_thread_array[i] == nullptr) {
@@ -54,38 +52,32 @@ protected:
                 break;
             }
         }
-        db<Synchronizer>(WRN) << "\ninsert end";
 
     }
 
-    // TODO make criterion save work 
     void ceiling() {
-        db<Synchronizer>(WRN) << "\nceiling start";
         Thread* current_thread = Thread::running();
         for (int i = 0; i < _size; i++) {
             if (current_thread->priority() < _thread_array[i]->priority()
                 && _thread_array[i]->priority() != Criterion::CEILING) {
                 _thread_array[i]->apply_ceiling();
-                db<Synchronizer>(WRN) << "\nceiling applied!";
+                db<Synchronizer>(INF) << "\nCeiling applied!";
                 return;
             }
         }
-        db<Synchronizer>(WRN) << "\nceiling end" ;
     }
 
     void restore_ceiling() {
-        db<Synchronizer>(WRN) << "\nrestore_ceiling start";
         Thread* current_thread = Thread::running();
         if (current_thread->priority() == Criterion::CEILING) {
             for (int i = 0; i < _size; i++) {
                 if (_thread_array[i] == current_thread) {
                     _thread_array[i]->restore_ceiling();
-                    db<Synchronizer>(WRN) << "\nceiling restored!";
+                    db<Synchronizer>(INF) << "\nCeiling restored!";
                     return;
                 }
             }
         }
-        db<Synchronizer>(WRN) << "\nrestore_ceiling end";
     }
 
 protected:

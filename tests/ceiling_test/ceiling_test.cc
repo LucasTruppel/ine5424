@@ -80,7 +80,6 @@ inline void exec_c()
     end = true;
 }
 
-// TODO improve the test
 int main() {
 
     semaphore = new Semaphore(2);

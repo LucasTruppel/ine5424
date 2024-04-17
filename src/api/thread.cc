@@ -394,7 +394,7 @@ int Thread::idle()
     db<Thread>(WRN) << "The last thread has exited!" << endl;
 
     if (profiler) {
-        double limit_interrupt_percent = 0.7; // Considering that the time spent on time interruptions should be a maximum of 0.7% of the total execution time.
+        double limit_interrupt_percent = 10;
         long current_timestamp = CLINT::mtime();
         double actual_interrupt_percent = (((double) (IC::interrupt_time)) / (current_timestamp - init_timestamp))*100;
         int frequency_limit = (int) (Traits<Timer>::FREQUENCY * (limit_interrupt_percent / actual_interrupt_percent));

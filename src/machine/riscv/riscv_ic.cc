@@ -20,7 +20,7 @@ void IC::entry()
 {
     // Save context into the stack
     CPU::Context::push(true);
-
+    
     if(Traits<IC>::hysterically_debugged)
         print_context(true);
 
@@ -28,7 +28,7 @@ void IC::entry()
 
     if(Traits<IC>::hysterically_debugged)
         print_context(false);
-
+    
     // Restore context from the stack
     CPU::Context::pop(true);
     CPU::iret();
@@ -41,6 +41,9 @@ void IC::dispatch()
     if((id != INT_SYS_TIMER) || Traits<IC>::hysterically_debugged)
         db<IC, System>(TRC) << "IC::dispatch(i=" << id << ") [sp=" << CPU::sp() << "]" << endl;
 
+    if (debug_registers)
+        db<IC, System>(TRC) << "BEFORE ECALL IC::dispatch(i=" << id << ") [sp=" << CPU::sp() << ", epc=" << CPU::epc() << ", mtime=" << CLINT::mtime() << "]" << endl;
+
     if(id == INT_SYS_TIMER) {
         if (profiler)
             last_interrupt_timestamp = CLINT::mtime();
@@ -48,16 +51,20 @@ void IC::dispatch()
         if(supervisor)
             CPU::ecall();   // we can't clear CPU::sipc(CPU::STI) in supervisor mode, so let's ecall int_m2s to do it for us
         else
-            Timer::reset(); // MIP.MTI is a direct logic on (MTIME == MTIMECMP) and reseting the Timer seems to be the only way to clear it
-        
-        if (profiler)
-            interrupt_time += CLINT::mtime() - last_interrupt_timestamp;
+            Timer::reset(); // MIP.MTI is a direct logic on (MTIME == MTIMECMP) and reseting the Timer seems to be the only way to clear it      
     }
 
-    _int_vector[id](id);
+    if (debug_registers)
+        db<IC, System>(TRC) << "AFTER ECALL IC::dispatch(i=" << id << ") [sp=" << CPU::sp() << ", epc=" << CPU::epc() << ", mtime=" << CLINT::mtime() << "]" << endl;
 
+    _int_vector[id](id);
+        
     if(id >= EXCS)
         CPU::fr(0); // tell CPU::Context::pop(true) not to increment PC since it is automatically incremented for hardware interrupts
+
+    if (profiler && id == INT_SYS_TIMER)
+        interrupt_time += CLINT::mtime() - last_interrupt_timestamp;
+
 }
 
 void IC::int_not(Interrupt_Id id)
