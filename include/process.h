@@ -26,6 +26,7 @@ class Thread
 protected:
     static const bool preemptive = Traits<Thread>::Criterion::preemptive;
     static const bool reboot = Traits<System>::reboot;
+    static const bool profiler = Traits<Application>::profiler;
 
     static const unsigned int QUANTUM = Traits<Thread>::QUANTUM;
     static const unsigned int STACK_SIZE = Traits<Application>::STACK_SIZE;
@@ -46,6 +47,7 @@ public:
     // Thread Scheduling Criterion
     typedef Traits<Thread>::Criterion Criterion;
     enum {
+        CEILING = Criterion::CEILING,
         ISR     = Criterion::ISR,
         HIGH    = Criterion::HIGH,
         NORMAL  = Criterion::NORMAL,
@@ -80,6 +82,8 @@ public:
 
     const volatile Criterion & priority() const { return _link.rank(); }
     void priority(const Criterion & p);
+    void apply_ceiling();
+    void restore_ceiling();
 
     int join();
     void pass();
@@ -128,6 +132,7 @@ protected:
 
     static bool _not_booting;
     static volatile unsigned int _thread_count;
+    static unsigned long init_timestamp;
     static Scheduler_Timer * _timer;
     static Scheduler<Thread> _scheduler;
 };

@@ -136,13 +136,18 @@ class IC: private IC_Common, private CLINT, private PLIC
 
 private:
     typedef CPU::Reg Reg;
-
+    
     static const bool supervisor = Traits<Machine>::supervisor;
+    static const bool profiler = Traits<Application>::profiler;
 
 public:
     static const unsigned int EXCS = CPU::EXCEPTIONS;
     static const unsigned int IRQS = CLINT::IRQS + PLIC::IRQS;
     static const unsigned int INTS = EXCS + IRQS;
+    static const bool debug_registers = Traits<IC>::debug_registers;
+    static unsigned long interrupt_time;
+    static unsigned long last_interrupt_timestamp;
+
 
     using IC_Common::Interrupt_Id;
     using IC_Common::Interrupt_Handler;

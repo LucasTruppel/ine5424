@@ -4,7 +4,7 @@
 
 __BEGIN_SYS
 
-Semaphore::Semaphore(long v) : _value(v)
+Semaphore::Semaphore(long v) : Synchronizer_Common(v), _value(v)
 {
     db<Synchronizer>(TRC) << "Semaphore(value=" << _value << ") => " << this << endl;
 }
@@ -21,8 +21,11 @@ void Semaphore::p()
     db<Synchronizer>(TRC) << "Semaphore::p(this=" << this << ",value=" << _value << ")" << endl;
 
     begin_atomic();
-    if(fdec(_value) < 1)
+    if(fdec(_value) < 1){
+        ceiling();
         sleep();
+    }
+    insert();
     end_atomic();
 }
 
@@ -32,6 +35,7 @@ void Semaphore::v()
     db<Synchronizer>(TRC) << "Semaphore::v(this=" << this << ",value=" << _value << ")" << endl;
 
     begin_atomic();
+    restore_ceiling();
     if(finc(_value) < 0)
         wakeup();
     end_atomic();

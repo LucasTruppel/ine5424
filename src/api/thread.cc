@@ -12,11 +12,15 @@ bool Thread::_not_booting;
 volatile unsigned int Thread::_thread_count;
 Scheduler_Timer * Thread::_timer;
 Scheduler<Thread> Thread::_scheduler;
+unsigned long Thread::init_timestamp = 0;
 
 
 void Thread::constructor_prologue(unsigned int stack_size)
 {
     lock();
+
+    if (profiler && _thread_count == 0)
+        init_timestamp = CLINT::mtime();
 
     _thread_count++;
     _scheduler.insert(this);
@@ -92,7 +96,6 @@ Thread::~Thread()
     delete _stack;
 }
 
-
 void Thread::priority(const Criterion & c)
 {
     lock();
@@ -112,6 +115,25 @@ void Thread::priority(const Criterion & c)
     unlock();
 }
 
+void Thread::apply_ceiling()
+{
+    if(_state != RUNNING) { // reorder the scheduling queue
+        _scheduler.remove(this);
+        criterion().apply_ceiling();
+        _scheduler.insert(this);
+    } else
+        criterion().apply_ceiling();
+}
+
+void Thread::restore_ceiling()
+{
+    if(_state != RUNNING) { // reorder the scheduling queue
+        _scheduler.remove(this);
+        criterion().restore_ceiling();
+        _scheduler.insert(this);
+    } else
+        criterion().restore_ceiling();
+}
 
 int Thread::join()
 {
@@ -370,6 +392,16 @@ int Thread::idle()
 
     CPU::int_disable();
     db<Thread>(WRN) << "The last thread has exited!" << endl;
+
+    if (profiler) {
+        double limit_interrupt_percent = 10;
+        long current_timestamp = CLINT::mtime();
+        double actual_interrupt_percent = (((double) (IC::interrupt_time)) / (current_timestamp - init_timestamp))*100;
+        int frequency_limit = (int) (Traits<Timer>::FREQUENCY * (limit_interrupt_percent / actual_interrupt_percent));
+        db<Thread>(INF) << "Time interreputions time="<< IC::interrupt_time << endl;
+        db<Thread>(WRN) << "Frequency limit= " << frequency_limit << endl;
+    }
+
     if(reboot) {
         db<Thread>(WRN) << "Rebooting the machine ..." << endl;
         Machine::reboot();

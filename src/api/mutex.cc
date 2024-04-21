@@ -4,7 +4,7 @@
 
 __BEGIN_SYS
 
-Mutex::Mutex(): _locked(false)
+Mutex::Mutex(): Synchronizer_Common(1), _locked(false)
 {
     db<Synchronizer>(TRC) << "Mutex() => " << this << endl;
 }
@@ -21,8 +21,11 @@ void Mutex::lock()
     db<Synchronizer>(TRC) << "Mutex::lock(this=" << this << ")" << endl;
 
     begin_atomic();
-    if(tsl(_locked))
+    if(tsl(_locked)) {
+        ceiling();
         sleep();
+    }
+    insert();
     end_atomic();
 }
 
@@ -32,6 +35,7 @@ void Mutex::unlock()
     db<Synchronizer>(TRC) << "Mutex::unlock(this=" << this << ")" << endl;
 
     begin_atomic();
+    restore_ceiling();
     if(_queue.empty())
         _locked = false;
     else

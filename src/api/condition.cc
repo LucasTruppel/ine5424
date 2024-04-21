@@ -7,7 +7,7 @@
 
 __BEGIN_SYS
 
-Condition::Condition()
+Condition::Condition(): Synchronizer_Common(1)
 {
     db<Synchronizer>(TRC) << "Condition() => " << this << endl;
 }
