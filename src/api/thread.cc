@@ -117,22 +117,30 @@ void Thread::priority(const Criterion & c)
 
 void Thread::apply_ceiling()
 {
-    if(_state != RUNNING) { // reorder the scheduling queue
+    switch(_state) {
+    case RUNNING:
+        break;
+    case READY:
         _scheduler.remove(this);
         criterion().apply_ceiling();
         _scheduler.insert(this);
-    } else
+        break;
+    case SUSPENDED:
         criterion().apply_ceiling();
+        break;
+    case WAITING:
+        _waiting->remove(&_link);
+        criterion().apply_ceiling();
+        _waiting->insert(&_link);
+        break;
+    case FINISHING:
+        break;
+    }
 }
 
 void Thread::restore_ceiling()
 {
-    if(_state != RUNNING) { // reorder the scheduling queue
-        _scheduler.remove(this);
-        criterion().restore_ceiling();
-        _scheduler.insert(this);
-    } else
-        criterion().restore_ceiling();
+    criterion().restore_ceiling();
 }
 
 int Thread::join()
