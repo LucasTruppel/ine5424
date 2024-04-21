@@ -45,6 +45,9 @@ protected:
     void wakeup_all() { Thread::wakeup_all(&_queue); }
 
     void insert() {
+        if (priority_inversion_protocol == Priority_Inversion_Protocol::NONE)
+            return;
+
         Thread* current_thread = Thread::running();
         for (int i = 0; i <_size; i++) {
             if (_thread_array[i] == nullptr) {
@@ -55,28 +58,46 @@ protected:
 
     }
 
-    void ceiling() {
+    void apply_new_priority() {
+        if (priority_inversion_protocol == Priority_Inversion_Protocol::NONE)
+            return;
+
         Thread* current_thread = Thread::running();
         for (int i = 0; i < _size; i++) {
-            if (current_thread->priority() < _thread_array[i]->priority()
-                && _thread_array[i]->priority() != Criterion::CEILING) {
-                _thread_array[i]->apply_ceiling();
-                db<Synchronizer>(INF) << "\nCeiling applied!";
+            if (current_thread->priority() < _thread_array[i]->priority()) {
+                _thread_array[i]->apply_new_priority(get_new_priority(current_thread));
+                db<Synchronizer>(INF) << "\nPriority inversion protocol applied!";
                 return;
             }
         }
     }
 
-    void restore_ceiling() {
+    void restore_priority() {
+        if (priority_inversion_protocol == Priority_Inversion_Protocol::NONE)
+            return;
+
         Thread* current_thread = Thread::running();
-        if (current_thread->priority() == Criterion::CEILING) {
+        if (current_thread->criterion().protocol_applied()) {
             for (int i = 0; i < _size; i++) {
                 if (_thread_array[i] == current_thread) {
-                    _thread_array[i]->restore_ceiling();
-                    db<Synchronizer>(INF) << "\nCeiling restored!";
+                    _thread_array[i]->restore_priority();
+                    db<Synchronizer>(INF) << "\nPriority inversion protocol restored!";
                     return;
                 }
             }
+        }
+    }
+
+private:
+    int get_new_priority(Thread* current_thread) {
+        switch (priority_inversion_protocol)
+        {
+        case Priority_Inversion_Protocol::NONE:  // Never runs.
+            return 0;
+        case Priority_Inversion_Protocol::CEILING:
+            return Criterion::CEILING;
+        case Priority_Inversion_Protocol::INHERITANCE:
+            return current_thread->priority(); 
         }
     }
 
@@ -84,6 +105,7 @@ protected:
     Queue _queue;
     Thread** _thread_array;
     long _size;
+    static const int priority_inversion_protocol = Traits<Synchronizer>::priority_inversion_protocol;
 };
 
 

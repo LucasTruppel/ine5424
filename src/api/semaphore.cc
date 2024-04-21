@@ -22,7 +22,7 @@ void Semaphore::p()
 
     begin_atomic();
     if(fdec(_value) < 1){
-        ceiling();
+        apply_new_priority();
         sleep();
     }
     insert();
@@ -35,7 +35,7 @@ void Semaphore::v()
     db<Synchronizer>(TRC) << "Semaphore::v(this=" << this << ",value=" << _value << ")" << endl;
 
     begin_atomic();
-    restore_ceiling();
+    restore_priority();
     if(finc(_value) < 0)
         wakeup();
     end_atomic();
