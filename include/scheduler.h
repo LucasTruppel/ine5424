@@ -119,7 +119,9 @@ public:
     operator const volatile int() const volatile { return _priority; }
 
     void apply_new_priority(int new_priority) {
-        _frozen_priority = _priority;
+        if (!_protocol_applied) {
+            _frozen_priority = _priority;
+        }
         _priority = new_priority;
         _protocol_applied = true;
     }

@@ -696,11 +696,11 @@ void _entry() // machine mode
         CPU::mstatus(CPU::MPP_M);                           // mret at machine mode
     }
 
-    CPU::mepc(CPU::Reg(&_setup));                       // entry = _setup
-    CPU::mret();                                        // enter supervisor mode at setup (mepc) with interrupts enabled (mstatus.mpie = true)
+    CPU::mepc(CPU::Reg(&_setup));                           // entry = _setup
+    CPU::mret();                                            // jump to _setup
 }
 
-void _setup() // supervisor mode
+void _setup()
 {
     kerr << endl;
     kout << endl;

@@ -77,13 +77,14 @@ protected:
             return;
 
         Thread* current_thread = Thread::running();
-        if (current_thread->criterion().protocol_applied()) {
-            for (int i = 0; i < _size; i++) {
-                if (_thread_array[i] == current_thread) {
+        for (int i = 0; i < _size; i++) {
+            if (_thread_array[i] == current_thread) {
+                if (current_thread->criterion().protocol_applied()) {
                     _thread_array[i]->restore_priority();
-                    db<Synchronizer>(INF) << "\nPriority inversion protocol restored!";
-                    return;
                 }
+                _thread_array[i] = nullptr;
+                db<Synchronizer>(INF) << "\nPriority inversion protocol restored!";
+                return;
             }
         }
     }
