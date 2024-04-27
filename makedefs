@@ -138,7 +138,7 @@ ifeq ($(ARCH),rv64)
 riscv_CC_FLAGS          = -march=rv64gc -mabi=lp64d -Wl, -mno-relax -mcmodel=medany
 riscv_AS_FLAGS          = -march=rv64gc -mabi=lp64d
 riscv_LD_FLAGS          = -m elf64lriscv_lp64f --no-relax
-riscv_EMULATOR          = qemu-system-riscv64 $(QEMU_DEBUG) -machine sifive_u -smp $(shell expr $(CPUS) + 1) -m $(RAM_SIZE_MB) -serial mon:stdio -bios none -nographic -no-reboot $(BOOT_ROM) -kernel 
+riscv_EMULATOR          = qemu-system-riscv64 $(QEMU_DEBUG) -machine sifive_u -smp $(shell expr $(CPUS) + 1) -m $(RAM_SIZE_MB) -serial stdio -bios none -no-reboot $(BOOT_ROM) -kernel 
 else
 riscv_CC_FLAGS          = -march=rv32gc -mabi=ilp32d -Wl, -mno-relax
 riscv_AS_FLAGS          = -march=rv32gc -mabi=ilp32d
