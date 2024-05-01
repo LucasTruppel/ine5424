@@ -115,22 +115,22 @@ void Thread::priority(const Criterion & c)
     unlock();
 }
 
-void Thread::apply_ceiling()
+void Thread::apply_new_priority(int new_priority)
 {
     switch(_state) {
     case RUNNING:
         break;
     case READY:
         _scheduler.remove(this);
-        criterion().apply_ceiling();
+        criterion().apply_new_priority(new_priority);
         _scheduler.insert(this);
         break;
     case SUSPENDED:
-        criterion().apply_ceiling();
+        criterion().apply_new_priority(new_priority);
         break;
     case WAITING:
         _waiting->remove(&_link);
-        criterion().apply_ceiling();
+        criterion().apply_new_priority(new_priority);
         _waiting->insert(&_link);
         break;
     case FINISHING:
@@ -138,9 +138,9 @@ void Thread::apply_ceiling()
     }
 }
 
-void Thread::restore_ceiling()
+void Thread::restore_priority()
 {
-    criterion().restore_ceiling();
+    criterion().restore_priority();
 }
 
 int Thread::join()

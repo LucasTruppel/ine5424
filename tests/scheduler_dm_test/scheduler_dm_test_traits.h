@@ -129,6 +129,7 @@ template<> struct Traits<Scheduler<Thread>>: public Traits<Build>
 template<> struct Traits<Synchronizer>: public Traits<Build>
 {
     static const bool enabled = Traits<System>::multithread;
+    static const int priority_inversion_protocol = Priority_Inversion_Protocol::NONE;
 };
 
 template<> struct Traits<Alarm>: public Traits<Build>

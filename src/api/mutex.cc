@@ -22,7 +22,7 @@ void Mutex::lock()
 
     begin_atomic();
     if(tsl(_locked)) {
-        ceiling();
+        apply_new_priority();
         sleep();
     }
     insert();
@@ -35,7 +35,7 @@ void Mutex::unlock()
     db<Synchronizer>(TRC) << "Mutex::unlock(this=" << this << ")" << endl;
 
     begin_atomic();
-    restore_ceiling();
+    restore_priority();
     if(_queue.empty())
         _locked = false;
     else

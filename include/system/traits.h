@@ -519,6 +519,12 @@ enum PMU_Event {
     LAST_EVENT
 };
 
+enum Priority_Inversion_Protocol {
+    NONE, 
+    CEILING, 
+    INHERITANCE
+};
+
 template<typename T>
 struct Traits {
     // Traits for components that do not declare any

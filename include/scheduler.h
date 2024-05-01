@@ -118,18 +118,25 @@ public:
 
     operator const volatile int() const volatile { return _priority; }
 
-    void apply_ceiling() {
-        _frozen_priority = _priority;
-        _priority = CEILING;
+    void apply_new_priority(int new_priority) {
+        if (!_protocol_applied) {
+            _frozen_priority = _priority;
+        }
+        _priority = new_priority;
+        _protocol_applied = true;
     }
 
-    void restore_ceiling() {
+    void restore_priority() {
         _priority = _frozen_priority;
+        _protocol_applied = false;
     }
+
+    bool protocol_applied() const { return _protocol_applied; }
 
 protected:
     volatile int _priority;
     volatile int _frozen_priority;
+    volatile bool _protocol_applied = false; // Priority Inversion Protocol. Used by synchronizer.h
 };
 
 // Round-Robin
