@@ -228,8 +228,10 @@ public:
     static Log_Addr fr() { Reg r; ASM("mv %0, a0" :  "=r"(r)); return r; }
     static void fr(Reg r) {       ASM("mv a0, %0" : : "r"(r) :); }
 
-    static unsigned int id() { return supervisor ? tp() : 0; }
-    static unsigned int cores() { return 1; }
+    static unsigned int id() { return tp(); }
+    static unsigned int cores() { return Traits<Build>::CPUS; }
+
+    static void smp_barrier(unsigned long cores = CPU::cores()) { CPU_Common::smp_barrier<&finc>(cores, id()); }
 
     using CPU_Common::clock;
     using CPU_Common::min_clock;

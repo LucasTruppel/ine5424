@@ -9,7 +9,11 @@
 #include <utility/handler.h>
 #include <scheduler.h>
 
-extern "C" { void __exit(); }
+extern "C" {
+    void __exit();
+    void _lock_heap();
+    void _unlock_heap();
+}
 
 __BEGIN_SYS
 
@@ -22,11 +26,14 @@ class Thread
     friend class Alarm;                 // for lock()
     friend class System;                // for init()
     friend class IC;                    // for link() for priority ceiling
+    friend void ::_lock_heap();         // for lock()
+    friend void ::_unlock_heap();       // for unlock()
 
 protected:
     static const bool preemptive = Traits<Thread>::Criterion::preemptive;
     static const bool reboot = Traits<System>::reboot;
     static const bool profiler = Traits<Application>::profiler;
+    static const bool multicore = Traits<Machine>::multicore;
 
     static const unsigned int QUANTUM = Traits<Thread>::QUANTUM;
     static const unsigned int STACK_SIZE = Traits<Application>::STACK_SIZE;
@@ -90,7 +97,8 @@ public:
     void suspend();
     void resume();
 
-    static Thread * volatile self() { return _not_booting ? running() : reinterpret_cast<Thread * volatile>(CPU::id() + 1); }
+    // static Thread * volatile self() { return _not_booting ? running() : reinterpret_cast<Thread * volatile>(CPU::id() + 1); }
+     static Thread * volatile self();
     static void yield();
     static void exit(int status = 0);
 
@@ -103,9 +111,29 @@ protected:
 
     static Thread * volatile running() { return _scheduler.chosen(); }
 
-    static void lock() { CPU::int_disable(); }
-    static void unlock() { CPU::int_enable(); }
-    static bool locked() { return CPU::int_disabled(); }
+    static void lock(Spin * lock = &_lock) {
+        CPU::int_disable();
+        if(multicore) {
+            lock->acquire();
+            if (lock == &_lock)
+                db<Thread>(WRN) << "lock value=" << lock->level() << endl;
+        }
+
+    }
+
+    static void unlock(Spin * lock = &_lock) {
+        if(multicore) {
+            if (lock == &_lock)
+                db<Thread>(WRN) << "unlocked" << endl;
+            lock->release();
+        }
+        if(_not_booting)
+            CPU::int_enable();
+    }
+
+    static bool locked() { 
+        return _lock.taken(); 
+    }
 
     static void sleep(Queue * q);
     static void wakeup(Queue * q);
@@ -135,6 +163,7 @@ protected:
     static unsigned long init_timestamp;
     static Scheduler_Timer * _timer;
     static Scheduler<Thread> _scheduler;
+    static Spin _lock;
 };
 
 

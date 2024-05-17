@@ -133,6 +133,9 @@ public:
 
     bool protocol_applied() const { return _protocol_applied; }
 
+    static const unsigned int HEADS = Traits<Machine>::CPUS;
+    static unsigned int current_head() { return CPU::id(); }
+
 protected:
     volatile int _priority;
     volatile int _frozen_priority;

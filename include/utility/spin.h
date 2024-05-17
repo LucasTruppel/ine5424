@@ -33,6 +33,11 @@ public:
     	}
     }
 
+    // for debugging purposes  
+    long level() const { 
+        return _level; 
+    }
+
     volatile bool taken() const { return (_owner != 0); }
 
 private:

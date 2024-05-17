@@ -21,12 +21,15 @@ void Semaphore::p()
     db<Synchronizer>(TRC) << "Semaphore::p(this=" << this << ",value=" << _value << ")" << endl;
 
     begin_atomic();
+    db<Synchronizer>(TRC) << "Semaphore::p lock" << endl;
     if(fdec(_value) < 1){
         apply_new_priority();
         sleep();
     }
     insert();
+     db<Synchronizer>(TRC) << "Semaphore::p unlock" << endl;
     end_atomic();
+    
 }
 
 
@@ -35,10 +38,13 @@ void Semaphore::v()
     db<Synchronizer>(TRC) << "Semaphore::v(this=" << this << ",value=" << _value << ")" << endl;
 
     begin_atomic();
+    db<Synchronizer>(TRC) << "Semaphore::v lock" << endl;
     restore_priority();
     if(finc(_value) < 0)
         wakeup();
+    db<Synchronizer>(TRC) << "Semaphore::v unlock" << endl;
     end_atomic();
+
 }
 
 __END_SYS

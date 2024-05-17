@@ -101,38 +101,50 @@ private:
     char * bi;
     System_Info * si;
     MMU mmu;
+
+    static volatile bool setup_ready;
 };
+
+volatile bool Setup::setup_ready = false;
 
 
 Setup::Setup()
 {
     si = reinterpret_cast<System_Info *>(&__boot_time_system_info);
 
-    // SETUP doesn't handle global constructors, so we need to manually initialize any object with a non-empty default constructor
-    new (&kout) OStream;
-    new (&kerr) OStream;
-    Display::init();
-    kout << endl;
-    kerr << endl;
+    if (CPU::id() == 0) {
+        // SETUP doesn't handle global constructors, so we need to manually initialize any object with a non-empty default constructor
+        new (&kout) OStream;
+        new (&kerr) OStream;
+        Display::init();
+        kout << endl;
+        kerr << endl;
 
-    db<Setup>(TRC) << "Setup(si=" << reinterpret_cast<void *>(si) << ",sp=" << CPU::sp() << ")" << endl;
-    db<Setup>(INF) << "Setup:si=" << *si << endl;
+        db<Setup>(TRC) << "Setup(si=" << reinterpret_cast<void *>(si) << ",sp=" << CPU::sp() << ")" << endl;
+        db<Setup>(INF) << "Setup:si=" << *si << endl;
 
-    // Print basic facts about this EPOS instance
-    say_hi();
+        // Print basic facts about this EPOS instance
+        say_hi();
 
-    if (supervisor) {
-        // Configure a flat memory model for the single task in the system
-        setup_flat_paging();
+        if (supervisor) {
+            // Configure a flat memory model for the single task in the system
+            setup_flat_paging();
 
-        // Relocate the machine to supervisor interrupt forwarder
-        setup_m2s();
+            // Relocate the machine to supervisor interrupt forwarder
+            setup_m2s();
 
-        // Enable paging
-        enable_paging();
-    }
-    else {
-        CPU::satp(0);
+            // Enable paging
+            enable_paging();
+        }
+        else {
+            CPU::satp(0);
+        }
+
+        setup_ready = true;
+    } else {
+
+        while (!setup_ready) {}
+
     }
 
     // SETUP ends here, so let's transfer control to the next stage (INIT or APP)
@@ -668,6 +680,7 @@ void _entry() // machine mode
 {
     typedef IF<Traits<CPU>::WORD_SIZE == 32, SV32_MMU, SV39_MMU>::Result MMU; // architecture.h will use No_MMU if multitasking is disable, but we need the correct MMU for the Flat Memory Model.
     static const bool supervisor = Traits<Machine>::supervisor;
+    static volatile bool bss_cleaned = false;
 
     if(CPU::mhartid() == 0)                             // SiFive-U has 2 cores, but core 0 (an E51) does not feature an MMU, so we halt it and let core 1 (an U54) run in a single-core configuration
         CPU::halt();
@@ -675,9 +688,15 @@ void _entry() // machine mode
     CPU::mstatusc(CPU::MIE);                            // disable interrupts (they will be reenabled at Init_End)
 
     CPU::tp(CPU::mhartid() - 1);                        // tp will be CPU::id() for supervisor mode; we won't count core 0, which is an heterogeneous E51
-    CPU::sp(Memory_Map::BOOT_STACK + Traits<Machine>::STACK_SIZE - sizeof(long)); // set the stack pointer, thus creating a stack for SETUP
+    CPU::sp(Memory_Map::BOOT_STACK + Traits<Machine>::STACK_SIZE * (CPU::id() + 1) - sizeof(long)); // set the stack pointer, thus creating a stack for SETUP
 
-    Machine::clear_bss();
+    
+    if (CPU::id() == 0) {
+        Machine::clear_bss();
+        bss_cleaned = true;
+    } else {
+        while (!bss_cleaned);
+    }
 
     if (supervisor) {
         CPU::mtvec(CPU::INT_DIRECT, Memory_Map::INT_M2S);   // setup a machine mode interrupt handler to forward timer interrupts (which cannot be delegated via mideleg)
@@ -688,12 +707,13 @@ void _entry() // machine mode
         CPU::mstatus(CPU::MPP_S | CPU::MPIE | CPU::MXR);    // prepare jump into supervisor mode at MRET with interrupts enabled at machine level
         CPU::mstatusc(CPU::SIE);                            // disable interrupts (they will be reenabled at Init_End)
         CPU::sstatuss(CPU::SUM);                            // allows User Memory access in supervisor mode
-
-        CPU::pmpcfg0(0b11111); 				                // configure PMP region 0 as (L=unlocked [0], [00], A = NAPOT [11], X [1], W [1], R [1])
-        CPU::pmpaddr0((1ULL << MMU::LA_BITS) - 1);          // comprising the whole memory space
     } else {
+        CPU::mie(0);
         CPU::mstatus(CPU::MPP_M);                           // mret at machine mode
     }
+
+    CPU::pmpcfg0(0b11111); 				                // configure PMP region 0 as (L=unlocked [0], [00], A = NAPOT [11], X [1], W [1], R [1])
+    CPU::pmpaddr0((1ULL << MMU::LA_BITS) - 1);          // comprising the whole memory space
 
     CPU::mepc(CPU::Reg(&_setup));                           // entry = _setup
     CPU::mret();                                            // jump to _setup

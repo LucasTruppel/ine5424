@@ -63,8 +63,8 @@ private:
     static Microsecond timer_period() { return 1000000 / frequency(); }
     static Tick ticks(const Microsecond & time) { return (time + timer_period() / 2) / timer_period(); }
 
-    static void lock() { Thread::lock(); }
-    static void unlock() { Thread::unlock(); }
+    static void lock() { Thread::lock(&_lock); }
+    static void unlock() { Thread::unlock(&_lock); }
 
     static void handler(IC::Interrupt_Id i);
 
@@ -80,6 +80,7 @@ private:
     static Alarm_Timer * _timer;
     static volatile Tick _elapsed;
     static Queue _request;
+    static Spin _lock;
 };
 
 
@@ -161,6 +162,7 @@ private:
 };
 
 class Chronometer: public IF<Traits<TSC>::enabled, TSC_Chronometer, Alarm_Chronometer>::Result {};
+// class Chronometer: public IF<Traits<TSC>::enabled && !Traits<Machine>::multicore, TSC_Chronometer, Alarm_Chronometer>::Result {};
 
 __END_SYS
 
