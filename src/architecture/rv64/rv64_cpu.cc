@@ -5,6 +5,8 @@
 
 __BEGIN_SYS
 
+volatile unsigned long CPU::lock_address = 0;
+
 unsigned int CPU::_cpu_clock;
 unsigned int CPU::_bus_clock;
 
