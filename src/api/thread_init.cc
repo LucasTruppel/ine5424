@@ -15,6 +15,14 @@ void Thread::init()
 
     CPU::smp_barrier();
 
+    if(multicore && (CPU::id() == 0))
+        IC::int_vector(IC::INT_RESCHEDULER, rescheduler);
+
+    CPU::smp_barrier();
+
+    if(multicore)
+        IC::enable(IC::INT_RESCHEDULER);
+
     Criterion::init();
 
     if (CPU::id() == 0) {

@@ -97,7 +97,7 @@ template <> struct Traits<Timer>: public Traits<Machine_Common>
     // Run your application as profiler to find the frequency limit you must respect when executing.
     // The choice must respect the scheduler time-slice, i. e., it must be higher
     // than the scheduler invocation frequency.
-    static const long FREQUENCY = 200; // Hz
+    static const long FREQUENCY = 100; // Hz
 };
 
 template <> struct Traits<UART>: public Traits<Machine_Common>

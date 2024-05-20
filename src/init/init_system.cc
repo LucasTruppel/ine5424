@@ -22,9 +22,10 @@ public:
         db<Init>(INF) << "Init:si=" << *System::info() << endl;
 
         db<Init>(INF) << "Initializing the architecture: " << endl;
-        CPU::init();
 
         if (CPU::id() == 0) {
+
+            CPU::init();
 
             db<Init>(INF) << "Initializing system's heap: " << endl;
             if(Traits<System>::multiheap) {
@@ -47,6 +48,7 @@ public:
 
         } else {
             CPU::smp_barrier();
+            CPU::init();
             Timer::init();
         }
 

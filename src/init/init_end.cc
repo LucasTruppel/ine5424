@@ -27,6 +27,8 @@ public:
             MMU::free(Memory_Map::BOOT_STACK, MMU::pages(Traits<Machine>::STACK_SIZE * Traits<Machine>::CPUS));
         }
 
+        CPU::smp_barrier();
+
         db<Init>(INF) << "INIT ends here!" << endl;
 
         // Thread::self() and Task::self() can be safely called after the construction of MAIN

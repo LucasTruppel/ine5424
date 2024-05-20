@@ -25,6 +25,8 @@ Periodic_Thread * thread_a;
 Periodic_Thread * thread_b;
 Periodic_Thread * thread_c;
 
+volatile bool all_created = false;
+
 typedef Traits<Thread>::Criterion Criterion;
 
 inline void exec(char c, unsigned int time = 0) // in miliseconds
@@ -70,6 +72,8 @@ int main()
 
     chrono.start();
 
+    all_created = true;
+
     int status_a = thread_a->join();
     int status_b = thread_b->join();
     int status_c = thread_c->join();
@@ -94,6 +98,8 @@ int main()
 
 int func_a()
 {
+    while (!all_created) {}
+
     exec('A');
 
     do {
@@ -109,6 +115,9 @@ int func_a()
 
 int func_b()
 {
+    while (!all_created) {}
+
+
     exec('B');
 
     do {
@@ -123,6 +132,8 @@ int func_b()
 
 int func_c()
 {
+    while (!all_created) {}
+
     exec('C');
 
     do {

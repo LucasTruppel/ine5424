@@ -49,7 +49,7 @@ void Thread::constructor_epilogue(Log_Addr entry, unsigned int stack_size)
         _scheduler.suspend(this);
 
     if(preemptive && (_state == READY) && (_link.rank() != IDLE))
-        reschedule();
+        reschedule_all_cpus();
 
     unlock();
 }
@@ -225,7 +225,7 @@ void Thread::resume()
         _scheduler.resume(this);
 
         if(preemptive)
-            reschedule();
+            reschedule_all_cpus();
     } else
         db<Thread>(WRN) << "Resume called for unsuspended object!" << endl;
 
@@ -305,7 +305,7 @@ void Thread::wakeup(Queue * q)
         _scheduler.resume(t);
 
         if(preemptive)
-            reschedule();
+            reschedule_all_cpus();
     }
 }
 
@@ -325,10 +325,24 @@ void Thread::wakeup_all(Queue * q)
         }
 
         if(preemptive)
-            reschedule();
+            reschedule_all_cpus();
     }
 }
 
+void Thread::reschedule(unsigned int cpu_id)
+{
+    if(!Criterion::timed || Traits<Thread>::hysterically_debugged)
+        db<Thread>(TRC) << "Thread::reschedule(int cpu_id)" << endl;
+
+    assert(locked()); // locking handled by caller
+
+    if (!multicore || (cpu_id == CPU::id())) {
+        reschedule();
+    } else {
+        db<Thread>(WRN) << "INT_RESCHEDULER sent from" << CPU::id() << " to " << cpu_id << endl;
+        IC::ipi(cpu_id, IC::INT_RESCHEDULER);
+    }
+}
 
 void Thread::reschedule()
 {
@@ -341,8 +355,29 @@ void Thread::reschedule()
     prev->criterion().update_on_reschedule(prev->_exec_start);
     Thread * next = _scheduler.choose();
     next->_exec_start = Alarm::elapsed();
-
     dispatch(prev, next);
+}
+
+void Thread::reschedule_all_cpus()
+{
+    if(!Criterion::timed || Traits<Thread>::hysterically_debugged)
+        db<Thread>(TRC) << "Thread::reschedule_all_cpus()" << endl;
+
+    assert(locked()); // locking handled by caller
+
+    for(unsigned int i = 0; i < Traits<Machine>::CPUS; i++) {
+        if (i != CPU::id())
+            reschedule(i);
+    }
+    reschedule();
+}
+
+void Thread::rescheduler(IC::Interrupt_Id i)
+{
+    lock();
+    db<Thread>(WRN) << "Thread::rescheduler" << endl;
+    reschedule();
+    unlock();
 }
 
 

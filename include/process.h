@@ -116,7 +116,7 @@ protected:
         if(multicore) {
             lock->acquire();
             if (lock == &_lock)
-                db<Thread>(WRN) << "lock value=" << lock->level() << endl;
+                db<Thread>(TRC) << "lock value=" << lock->level() << endl;
         }
 
     }
@@ -124,15 +124,18 @@ protected:
     static void unlock(Spin * lock = &_lock) {
         if(multicore) {
             if (lock == &_lock)
-                db<Thread>(WRN) << "unlocked" << endl;
+                db<Thread>(TRC) << "unlocked" << endl;
             lock->release();
         }
         if(_not_booting)
             CPU::int_enable();
     }
 
-    static bool locked() { 
-        return _lock.taken(); 
+    static bool locked() {
+        if (multicore)
+            return _lock.taken(); 
+        else
+            return CPU::int_enabled();
     }
 
     static void sleep(Queue * q);
@@ -140,6 +143,9 @@ protected:
     static void wakeup_all(Queue * q);
 
     static void reschedule();
+    static void reschedule(unsigned int cpu_id);
+    static void reschedule_all_cpus();
+    static void rescheduler(IC::Interrupt_Id interrupt);
     static void time_slicer(IC::Interrupt_Id interrupt);
 
     static void dispatch(Thread * prev, Thread * next, bool charge = true);

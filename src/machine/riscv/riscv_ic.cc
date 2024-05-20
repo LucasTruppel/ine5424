@@ -48,29 +48,27 @@ void IC::dispatch()
         if (profiler)
             last_interrupt_timestamp = CLINT::mtime();
         
-        if(supervisor) {
-            if(id == INT_RESCHEDULER)
-                CPU::sipc(CPU::SSI);        // IPI EOI was already issued by _int_m2s, so we only clear SSI
-            else if(id == INT_SYS_TIMER)
-                CPU::ecall();               // we can't clear CPU::sipc(CPU::STI) in supervisor mode, so let's ecall int_m2s to do it for us
-        } else {
-            if(id == INT_RESCHEDULER)
-                IC::ipi_eoi(id & CLINT::INT_MASK);
-            else if(id == INT_SYS_TIMER)
-                Timer::reset();             // MIP.MTI is a direct logic on (MTIME == MTIMECMP) and reseting the Timer seems to be the only way to clear it
-        }    
+        if(supervisor)
+            CPU::ecall();   // we can't clear CPU::sipc(CPU::STI) in supervisor mode, so let's ecall int_m2s to do it for us
+        else
+            Timer::reset(); // MIP.MTI is a direct logic on (MTIME == MTIMECMP) and reseting the Timer seems to be the only way to clear it
+    }else if (id == INT_RESCHEDULER) {
+        if (supervisor)
+            CPU::sipc(CPU::SSI); 
+        else
+            IC::ipi_eoi(id & CLINT::INT_MASK);
     }
 
     if (debug_registers)
         db<IC, System>(TRC) << "AFTER ECALL IC::dispatch(i=" << id << ") [sp=" << CPU::sp() << ", epc=" << CPU::epc() << ", mtime=" << CLINT::mtime() << "]" << endl;
 
     _int_vector[id](id);
-        
-    if(id >= EXCS)
-        CPU::fr(0); // tell CPU::Context::pop(true) not to increment PC since it is automatically incremented for hardware interrupts
 
     if (profiler && id == INT_SYS_TIMER)
         interrupt_time += CLINT::mtime() - last_interrupt_timestamp;
+        
+    if(id >= EXCS)
+        CPU::fr(0); // tell CPU::Context::pop(true) not to increment PC since it is automatically incremented for hardware interrupts;
 
 }
 
