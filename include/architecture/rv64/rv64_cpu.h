@@ -256,54 +256,119 @@ public:
         register T old;
         register T one = 1;
         if(sizeof(T) == sizeof(Reg64))
-            ASM("1: amoswap.d   %0, %2, (%1)  \n" : "=&r"(old) : "r"(&lock), "r"(one) : "cc", "memory");
+            ASM("1: lr.d    %0, (%1)        \n"
+                "   sc.d    t3, %2, (%1)    \n"
+                "   bnez    t3, 1b          \n" : "=&r"(old) : "r"(&lock), "r"(one) : "t3", "cc", "memory");
         else
-            ASM("1: amoswap.w   %0, %2, (%1)  \n" : "=&r"(old) : "r"(&lock), "r"(one) : "cc", "memory");
+            ASM("1: lr.w    %0, (%1)        \n"
+                "   sc.w    t3, %2, (%1)    \n"
+                "   bnez    t3, 1b          \n" : "=&r"(old) : "r"(&lock), "r"(one) : "t3", "cc", "memory");
         return old;
     }
 
-     template<typename T>
+    template<typename T>
     static T finc(volatile T & value) {
         register T old;
-        register T one = 1;
         if(sizeof(T) == sizeof(Reg64))
-            ASM("1: amoadd.d  %0, %2 , (%1)        \n" : "=&r"(old) : "r"(&value), "r"(one) : "cc", "memory");
+            ASM("1: lr.d    %0, (%1)        \n"
+                "   addi    %0, %0, 1       \n"
+                "   sc.d    t3, %0, (%1)    \n"
+                "   bnez    t3, 1b          \n" : "=&r"(old) : "r"(&value) : "t3", "cc", "memory");
         else
-            ASM("1: amoadd.w  %0, %2 , (%1)        \n" : "=&r"(old) : "r"(&value), "r"(one) : "cc", "memory");
-        return old;
+            ASM("1: lr.w    %0, (%1)        \n"
+                "   addi    %0, %0, 1       \n"
+                "   sc.w    t3, %0, (%1)    \n"
+                "   bnez    t3, 1b          \n" : "=&r"(old) : "r"(&value) : "t3", "cc", "memory");
+        return old - 1;
     }
 
     template<typename T>
     static T fdec(volatile T & value) {
         register T old;
-        register T minus_one = -1;
         if(sizeof(T) == sizeof(Reg64))
-            ASM("1: amoadd.d  %0, %2 , (%1)        \n" : "=&r"(old) : "r"(&value), "r"(minus_one) : "cc", "memory");
+            ASM("1: lr.d    %0, (%1)        \n"
+                "   addi    %0, %0, -1      \n"
+                "   sc.d    t3, %0, (%1)    \n"
+                "   bnez    t3, 1b          \n" : "=&r"(old) : "r"(&value) : "t3", "cc", "memory");
         else
-            ASM("1: amoadd.w  %0, %2 , (%1)        \n" : "=&r"(old) : "r"(&value), "r"(minus_one) : "cc", "memory");
-        return old;  
+            ASM("1: lr.w    %0, (%1)        \n"
+                "   addi    %0, %0, -1      \n"
+                "   sc.w    t3, %0, (%1)    \n"
+                "   bnez    t3, 1b          \n" : "=&r"(old) : "r"(&value) : "t3", "cc", "memory");
+        return old + 1;
     }
 
     template <typename T>
-    static T cas(volatile T & value, T compare, T replacement) { 
+    static T cas(volatile T & value, T compare, T replacement) {
         register T old;
-        register volatile unsigned long &lock_value = CPU::lock_address;
         if(sizeof(T) == sizeof(Reg64))
-            ASM("1: amoswap.d.aq    t0, t0, (%4)  \n"
-                "   bnez            t0, 1b        \n"
-                "   ld              %0, (%1)      \n"
-                "   bne             %0, %2, 2f    \n"
-                "   sd              %3, (%1)      \n"
-                "2: amoswap.d.rl    x0, x0, (%4)  \n" : "=&r"(old) : "r"(&value), "r"(compare), "r"(replacement), "r"(&lock_value) : "t0", "cc", "memory");
+            ASM("1: lr.d    %0, (%1)        \n"
+                "   bne     %0, %2, 2f      \n"
+                "   sc.d    t3, %3, (%1)    \n"
+                "   bnez    t3, 1b          \n"
+                "2:                         \n" : "=&r"(old) : "r"(&value), "r"(compare), "r"(replacement) : "t3", "cc", "memory");
         else
-            ASM("1: amoswap.d.aq    t0, t0, (%4)  \n"
-                "   bnez            t0, 1b        \n"
-                "   lw              %0, (%1)      \n"
-                "   bne             %0, %2, 2f    \n"
-                "   sw              %3, (%1)      \n"
-                "2: amoswap.d.rl    x0, x0, (%4)  \n" : "=&r"(old) : "r"(&value), "r"(compare), "r"(replacement), "r"(&lock_value) : "t0", "cc", "memory");
+            ASM("1: lr.w    %0, (%1)        \n"
+                "   bne     %0, %2, 2f      \n"
+                "   sc.w    t3, %3, (%1)    \n"
+                "   bnez    t3, 1b          \n"
+                "2:                         \n" : "=&r"(old) : "r"(&value), "r"(compare), "r"(replacement) : "t3", "cc", "memory");
         return old;
     }
+
+    // template<typename T>
+    // static T tsl(volatile T & lock) {
+    //     register T old;
+    //     register T one = 1;
+    //     if(sizeof(T) == sizeof(Reg64))
+    //         ASM("1: amoswap.d   %0, %2, (%1)  \n" : "=&r"(old) : "r"(&lock), "r"(one) : "cc", "memory");
+    //     else
+    //         ASM("1: amoswap.w   %0, %2, (%1)  \n" : "=&r"(old) : "r"(&lock), "r"(one) : "cc", "memory");
+    //     return old;
+    // }
+
+    //  template<typename T>
+    // static T finc(volatile T & value) {
+    //     register T old;
+    //     register T one = 1;
+    //     if(sizeof(T) == sizeof(Reg64))
+    //         ASM("1: amoadd.d  %0, %2 , (%1)        \n" : "=&r"(old) : "r"(&value), "r"(one) : "cc", "memory");
+    //     else
+    //         ASM("1: amoadd.w  %0, %2 , (%1)        \n" : "=&r"(old) : "r"(&value), "r"(one) : "cc", "memory");
+    //     return old;
+    // }
+
+    // template<typename T>
+    // static T fdec(volatile T & value) {
+    //     register T old;
+    //     register T minus_one = -1;
+    //     if(sizeof(T) == sizeof(Reg64))
+    //         ASM("1: amoadd.d  %0, %2 , (%1)        \n" : "=&r"(old) : "r"(&value), "r"(minus_one) : "cc", "memory");
+    //     else
+    //         ASM("1: amoadd.w  %0, %2 , (%1)        \n" : "=&r"(old) : "r"(&value), "r"(minus_one) : "cc", "memory");
+    //     return old;  
+    // }
+
+    // template <typename T>
+    // static T cas(volatile T & value, T compare, T replacement) { 
+    //     register T old;
+    //     register volatile unsigned long &lock_value = CPU::lock_address;
+    //     if(sizeof(T) == sizeof(Reg64))
+    //         ASM("1: amoswap.d.aq    t0, t0, (%4)  \n"
+    //             "   bnez            t0, 1b        \n"
+    //             "   ld              %0, (%1)      \n"
+    //             "   bne             %0, %2, 2f    \n"
+    //             "   sd              %3, (%1)      \n"
+    //             "2: amoswap.d.rl    x0, x0, (%4)  \n" : "=&r"(old) : "r"(&value), "r"(compare), "r"(replacement), "r"(&lock_value) : "t0", "cc", "memory");
+    //     else
+    //         ASM("1: amoswap.d.aq    t0, t0, (%4)  \n"
+    //             "   bnez            t0, 1b        \n"
+    //             "   lw              %0, (%1)      \n"
+    //             "   bne             %0, %2, 2f    \n"
+    //             "   sw              %3, (%1)      \n"
+    //             "2: amoswap.d.rl    x0, x0, (%4)  \n" : "=&r"(old) : "r"(&value), "r"(compare), "r"(replacement), "r"(&lock_value) : "t0", "cc", "memory");
+    //     return old;
+    // }
 
     static void flush_tlb() {         ASM("sfence.vma"    : :           : "memory"); }
     static void flush_tlb(Reg addr) { ASM("sfence.vma %0" : : "r"(addr) : "memory"); }

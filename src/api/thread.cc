@@ -339,7 +339,7 @@ void Thread::reschedule(unsigned int cpu_id)
     if (!multicore || (cpu_id == CPU::id())) {
         reschedule();
     } else {
-        db<Thread>(WRN) << "INT_RESCHEDULER sent from" << CPU::id() << " to " << cpu_id << endl;
+        db<Thread>(TRC) << "INT_RESCHEDULER sent from" << CPU::id() << " to " << cpu_id << endl;
         IC::ipi(cpu_id, IC::INT_RESCHEDULER);
     }
 }
@@ -375,7 +375,7 @@ void Thread::reschedule_all_cpus()
 void Thread::rescheduler(IC::Interrupt_Id i)
 {
     lock();
-    db<Thread>(WRN) << "Thread::rescheduler" << endl;
+    db<Thread>(TRC) << "Thread::rescheduler" << endl;
     reschedule();
     unlock();
 }

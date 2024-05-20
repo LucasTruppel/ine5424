@@ -1,0 +1,24 @@
+
+
+
+
+
+
+This is EPOS!
+
+Setting up this machine as follows: 
+  Mode:         library
+  Processor:    2 x RV64 at 1000 MHz (BUS clock = 33 MHz)
+  Machine:      SiFive-U
+  Memory:       131072 KB [0x0000000080000000:0x0000000087ffffff]
+  User memory:  126967 KB [0x0000000080000000:0x0000000087bfdfff]
+  I/O space:    524288 KB [0x0000000000000000:0x000000001fffffff]
+  Node Id:      will get from the network!
+  Position:     will get from the network!
+
+Producer x Consumer
+P->a C<-a P->b C<-b P->c C<-c P->d C<-d P->e C<-e P->f C<-f P->g C<-g P->h <1>: 
+IC::Exception(1) => {thread=0x00000000879fdef8,sp=0x00000000879fdb58,status=0xa0
+0001800,cause=1,epc=0x0000000000000000,tval=0x0000000000000000} => instruction p
+rotection violation :<1>
+<1>: The running thread will now be terminated! :<1>

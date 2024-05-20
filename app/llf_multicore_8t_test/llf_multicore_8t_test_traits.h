@@ -13,12 +13,13 @@ template<> struct Traits<Build>: public Traits_Tokens
     static const unsigned int ARCHITECTURE = RV64;
     static const unsigned int MACHINE = RISCV;
     static const unsigned int MODEL = SiFive_U;
-    static const unsigned int CPUS = 2;
+    static const unsigned int CPUS = 4;
     static const unsigned int NETWORKING = STANDALONE;
     static const unsigned int EXPECTED_SIMULATION_TIME = 60; // s (0 => not simulated)
 
     // Default flags
     static const bool enabled = true;
+    static const bool monitored = true;
     static const bool debugged = true;
     static const bool hysterically_debugged = false;
 };
@@ -116,8 +117,9 @@ template<> struct Traits<Thread>: public Traits<Build>
     static const bool enabled = Traits<System>::multithread;
     static const bool trace_idle = hysterically_debugged;
     static const bool simulate_capacity = false;
+    static const int priority_inversion_protocol = NONE;
 
-    typedef RR Criterion;
+    typedef LLF Criterion;
     static const unsigned int QUANTUM = 10000; // us
 };
 
@@ -130,6 +132,7 @@ template<> struct Traits<Synchronizer>: public Traits<Build>
 {
     static const bool enabled = Traits<System>::multithread;
     static const int priority_inversion_protocol = Priority_Inversion_Protocol::NONE;
+
 };
 
 template<> struct Traits<Alarm>: public Traits<Build>
