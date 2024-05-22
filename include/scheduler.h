@@ -49,6 +49,16 @@ public:
         SPORADIC    = NORMAL
     };
 
+    // Policy events
+    typedef int Event;
+    enum {
+        NONE            = 0,
+        CREATE          = 1 << 0,
+        PERIOD_START    = 1 << 1,
+        SCHEDULED       = 1 << 2,
+        LEAVE           = 1 << 3
+    };
+
     // Policy traits
     static const bool timed = false;
     static const bool dynamic = false;
@@ -90,8 +100,9 @@ public:
     unsigned int queue() const { return 0; }
     void queue(unsigned int q) {}
 
-    bool update() { return false; }
-    bool update_on_reschedule(const Microsecond & exec_start) { return false;}
+    bool update(Event event = NONE) { return false; }
+
+    bool is_periodic(int priority) { return (priority >= PERIODIC) && (priority < APERIODIC); }
 
     bool collect(bool end = false) { return false; }
     bool charge(bool end = false) { return true; }
@@ -227,11 +238,14 @@ public:
     EDF(int p = APERIODIC): Real_Time_Scheduler_Common(p) {}
     EDF(const Microsecond & d, const Microsecond & p = SAME, const Microsecond & c = UNKNOWN, unsigned int cpu = ANY);
 
-    void update();
+    void update(Event event = NONE);
 };
 
 class LLF: public Real_Time_Scheduler_Common
 {
+private:
+    typedef Timer_Common::Tick Tick;
+
 public:
     static const bool timed = true;
     static const bool dynamic = true;
@@ -241,14 +255,30 @@ public:
     LLF(int p = APERIODIC): Real_Time_Scheduler_Common(p), _wcet(UNKNOWN) {}
     LLF(const Microsecond & d, const Microsecond & wcet, const Microsecond & p = SAME, const Microsecond & c = UNKNOWN, unsigned int cpu = ANY);
 
-    void update();
-    void update_on_reschedule(const Microsecond & exec_start);
+    void update(Event event = NONE);
 
 public:
     Microsecond _wcet;
+    Tick _exec_start = 0U;
 
 };
 
+class GLLF: public LLF
+{
+public:
+    GLLF(int p = APERIODIC): LLF(p) {}
+    GLLF(const Microsecond & d, const Microsecond & wcet, const Microsecond & p = SAME, const Microsecond & c = UNKNOWN, unsigned int cpu = ANY)
+    : LLF(d, wcet, p, c, cpu) {}
+};
+
 __END_SYS
+
+__BEGIN_UTIL
+
+template<typename T>
+class Scheduling_Queue<T, GLLF>:
+public Multihead_Scheduling_List<T> {};
+
+__END_UTIL
 
 #endif

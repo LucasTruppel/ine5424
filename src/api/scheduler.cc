@@ -11,32 +11,38 @@ FCFS::FCFS(int p, Tn & ... an): Priority((p == IDLE) ? IDLE : Alarm::elapsed()) 
 
 EDF::EDF(const Microsecond & d, const Microsecond & p, const Microsecond & c, unsigned int): Real_Time_Scheduler_Common(Alarm::ticks(d), Alarm::ticks(d), p, c) {}
 
-void EDF::update() {
-    if (_priority == CEILING) {
-        if ((_frozen_priority >= PERIODIC) && (_frozen_priority < APERIODIC))
-            _frozen_priority = Alarm::elapsed() + _deadline;
-    } else if((_priority >= PERIODIC) && (_priority < APERIODIC))
-        _priority = Alarm::elapsed() + _deadline;
+void EDF::update(Event event) {
+    if (event & PERIOD_START) {
+        if (_priority == CEILING) {
+            if ((_frozen_priority >= PERIODIC) && (_frozen_priority < APERIODIC))
+                _frozen_priority = Alarm::elapsed() + _deadline;
+        } else if((_priority >= PERIODIC) && (_priority < APERIODIC))
+            _priority = Alarm::elapsed() + _deadline;
+    }
 }
 
 LLF::LLF(const Microsecond & d, const Microsecond & wcet, const Microsecond & p, const Microsecond & c, unsigned int): 
     Real_Time_Scheduler_Common(Alarm::ticks(d) - Alarm::ticks(wcet), Alarm::ticks(d), p, c),
     _wcet(Alarm::ticks(wcet)) {}
 
-void LLF::update() {
-    if (_priority == CEILING) {
-        if ((_frozen_priority >= PERIODIC) && (_frozen_priority < APERIODIC))
-            _frozen_priority = Alarm::elapsed() + _deadline - _wcet;
-    } else if((_priority >= PERIODIC) && (_priority < APERIODIC))
-        _priority = Alarm::elapsed() + _deadline - _wcet;
-}
+void LLF::update(Event event) {
+    if (event & PERIOD_START) {
+        db<Thread>(TRC) << "###" << endl;
 
-void LLF::update_on_reschedule(const Microsecond & exec_start) {
-    if (_priority == CEILING) {
-        if ((_frozen_priority >= PERIODIC) && (_frozen_priority < APERIODIC))
-            _frozen_priority += Alarm::elapsed() - exec_start;
-    } else if((_priority >= PERIODIC) && (_priority < APERIODIC))
-        _priority += Alarm::elapsed() - exec_start;
+        if (protocol_applied() && is_periodic(_frozen_priority))
+            _frozen_priority = Alarm::elapsed() + _deadline - _wcet;
+        else if(!protocol_applied() && is_periodic(_priority))
+            _priority = Alarm::elapsed() + _deadline - _wcet;
+
+    } else if (event & LEAVE) {
+        if (protocol_applied() && is_periodic(_frozen_priority)) 
+            _frozen_priority += Alarm::elapsed() - _exec_start;
+        else if(!protocol_applied() && is_periodic(_priority))
+            _priority += Alarm::elapsed() - _exec_start;
+
+    } else if (event & SCHEDULED) {
+        _exec_start = Alarm::elapsed();
+    }
 }
 
 // Since the definition of FCFS above is only known to this unit, forcing its instantiation here so it gets emitted in scheduler.o for subsequent linking with other units is necessary.

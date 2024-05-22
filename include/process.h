@@ -62,6 +62,8 @@ public:
         MAIN    = Criterion::MAIN,
         IDLE    = Criterion::IDLE
     };
+    
+    typedef Criterion::Event Event;
 
     // Thread Queue
     typedef Ordered_Queue<Thread, Criterion, Scheduler<Thread>::Element> Queue;
@@ -106,6 +108,8 @@ protected:
     void constructor_prologue(unsigned int stack_size);
     void constructor_epilogue(Log_Addr entry, unsigned int stack_size);
 
+    void update(Event event);
+
     Criterion & criterion() { return const_cast<Criterion &>(_link.rank()); }
     Queue::Element * link() { return &_link; }
 
@@ -135,7 +139,7 @@ protected:
         if (multicore)
             return _lock.taken(); 
         else
-            return CPU::int_enabled();
+            return CPU::int_disabled();
     }
 
     static void sleep(Queue * q);

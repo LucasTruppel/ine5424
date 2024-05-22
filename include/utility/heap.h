@@ -147,11 +147,11 @@ public:
     }
 
 private:
-    // void enter() { _lock_heap(); }
-    // void leave() { _unlock_heap(); }
+    void enter() { _lock_heap(); }
+    void leave() { _unlock_heap(); }
 
-    void enter() {  }
-    void leave() {  }
+    // void enter() {  }
+    // void leave() {  }
 };
 
 

@@ -352,9 +352,7 @@ void Thread::reschedule()
     assert(locked()); // locking handled by caller
 
     Thread * prev = running();
-    prev->criterion().update_on_reschedule(prev->_exec_start);
     Thread * next = _scheduler.choose();
-    next->_exec_start = Alarm::elapsed();
     dispatch(prev, next);
 }
 
@@ -404,6 +402,11 @@ void Thread::dispatch(Thread * prev, Thread * next, bool charge)
             prev->_state = READY;
         next->_state = RUNNING;
 
+        if (Criterion::dynamic) {
+            prev->update(Criterion::LEAVE);
+            next->update(Criterion::SCHEDULED);
+        }
+
         db<Thread>(TRC) << "Thread::dispatch(prev=" << prev << ",next=" << next << ")" << endl;
         if(Traits<Thread>::debugged && Traits<Debug>::info) {
             CPU::Context tmp;
@@ -413,23 +416,55 @@ void Thread::dispatch(Thread * prev, Thread * next, bool charge)
         db<Thread>(INF) << "Thread::dispatch:next={" << next << ",ctx=" << *next->_context << "}" << endl;
 
         // assert(_lock.level() == 1);
-        db<Thread>(TRC) << "locked released at dispatch" << endl;
-        _lock.release();
+        if (multicore) {
+            db<Thread>(TRC) << "locked released at dispatch" << endl;
+            _lock.release();
+        }
 
+        db<Thread>(INF) << "BEFORE SWITCH CONTEXT" << endl;
+        db<Thread>(INF) << "SP=" << CPU::sp() << endl;
         // The non-volatile pointer to volatile pointer to a non-volatile context is correct
         // and necessary because of context switches, but here, we are locked() and
         // passing the volatile to switch_constext forces it to push prev onto the stack,
         // disrupting the context (it doesn't make a difference for Intel, which already saves
         // parameters on the stack anyway).
         CPU::switch_context(const_cast<Context **>(&prev->_context), next->_context);
+        db<Thread>(INF) << "AFTER SWITCH CONTEXT" << endl;
+        db<Thread>(INF) << "SP=" << CPU::sp() << endl;
 
-        CPU::int_disable();
-        _lock.acquire();
-        db<Thread>(TRC) << "locked acquired at dispatch" << endl;
+        if (multicore) {
+            CPU::int_disable();
+            _lock.acquire();
+            db<Thread>(TRC) << "locked acquired at dispatch" << endl;
+        }
 
     }
 }
 
+void Thread::update(Event event)
+{
+    switch(_state) {
+    case RUNNING:
+        criterion().update(event);
+        break;
+    case READY:
+        _scheduler.remove(this);
+        criterion().update(event);
+        _scheduler.insert(this);
+        break;
+    case SUSPENDED:
+        criterion().update(event);
+        break;
+    case WAITING:
+        _waiting->remove(&_link);
+        criterion().update(event);
+        _waiting->insert(&_link);
+        break;
+    case FINISHING:
+        criterion().update(event);
+        break;
+    }
+}
 
 int Thread::idle()
 {

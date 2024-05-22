@@ -49,7 +49,7 @@ protected:
         ~Dynamic_Handler() {}
 
         void operator()() {
-            _thread->criterion().update();
+            _thread->criterion().update(Criterion::PERIOD_START);
 
             Semaphore_Handler::operator()();
         }
