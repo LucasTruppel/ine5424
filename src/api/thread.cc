@@ -148,6 +148,8 @@ void Thread::apply_new_priority(int new_priority)
 {
     switch(_state) {
     case RUNNING:
+        assert(multicore);
+        criterion().apply_new_priority(new_priority);
         break;
     case READY:
         _scheduler.remove(this);
@@ -398,7 +400,7 @@ void Thread::reschedule(unsigned int cpu_id)
     if (!multicore || (cpu_id == CPU::id())) {
         reschedule();
     } else {
-        db<Thread>(TRC) << "INT_RESCHEDULER sent from" << CPU::id() << " to " << cpu_id << endl;
+        db<Thread>(TRC) << "INT_RESCHEDULER sent from " << CPU::id() << " to " << cpu_id << endl;
         IC::ipi(cpu_id, IC::INT_RESCHEDULER);
     }
 }
@@ -415,7 +417,7 @@ void Thread::reschedule()
     dispatch(prev, next);
 }
 
-void Thread::reschedule_all_cpus()
+void Thread::reschedule_all_cpus(const bool reschedule_after_ipi)
 {
     if(!Criterion::timed || Traits<Thread>::hysterically_debugged)
         db<Thread>(TRC) << "Thread::reschedule_all_cpus()" << endl;
@@ -426,7 +428,8 @@ void Thread::reschedule_all_cpus()
         if (i != CPU::id())
             reschedule(i);
     }
-    reschedule();
+    if (reschedule_after_ipi)
+        reschedule();
 }
 
 void Thread::rescheduler(IC::Interrupt_Id i)
