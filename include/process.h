@@ -148,7 +148,7 @@ protected:
 
     static void reschedule();
     static void reschedule(unsigned int cpu_id);
-    static void reschedule_all_cpus();
+    static void reschedule_all_cpus(const bool reschedule_after_ipi = true);
     static void rescheduler(IC::Interrupt_Id interrupt);
     static void time_slicer(IC::Interrupt_Id interrupt);
 

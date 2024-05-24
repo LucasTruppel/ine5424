@@ -12,6 +12,8 @@ __BEGIN_SYS
 class Synchronizer_Common
 {
 protected:
+    static const bool multicore = Traits<Machine>::multicore;
+    
     typedef Thread::Queue Queue;
     typedef Thread::Criterion Criterion;
 
@@ -62,14 +64,18 @@ protected:
         if (priority_inversion_protocol == Priority_Inversion_Protocol::NONE)
             return;
 
+        bool was_applied = false;
         Thread* current_thread = Thread::running();
         for (int i = 0; i < _size; i++) {
             if (current_thread->priority() < _thread_array[i]->priority()) {
+                was_applied = true;
                 _thread_array[i]->apply_new_priority(get_new_priority(current_thread));
                 db<Synchronizer>(INF) << "\nPriority inversion protocol applied!";
-                return;
             }
         }
+        if (multicore && was_applied)
+            current_thread->reschedule_all_cpus(false);
+        return;
     }
 
     void restore_priority() {
