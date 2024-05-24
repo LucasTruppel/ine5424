@@ -37,8 +37,10 @@ void Thread::init()
 
     CPU::smp_barrier();
 
+    lock();
     // Idle thread creation does not cause rescheduling (see Thread::constructor_epilogue)
     new (SYSTEM) Thread(Thread::Configuration(Thread::READY, Thread::IDLE), &Thread::idle);
+    unlock();
 
     CPU::smp_barrier();
 

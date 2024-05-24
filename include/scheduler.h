@@ -71,7 +71,10 @@ public:
     static const bool task_wide = false;
     static const bool cpu_wide = false;
     static const bool system_wide = false;
+    static const bool global = false;
+    static const bool partitioned = false;
     static const unsigned int QUEUES = 1;
+    static const unsigned int HEADS = 1;
 
     // Runtime Statistics (for policies that don't use any; that's why its a union)
     union Statistics {
@@ -144,8 +147,8 @@ public:
 
     bool protocol_applied() const { return _protocol_applied; }
 
-    static const unsigned int HEADS = Traits<Machine>::CPUS;
     static unsigned int current_head() { return CPU::id(); }
+    static unsigned int current_queue() { return CPU::id(); }
 
 protected:
     volatile int _priority;
@@ -269,6 +272,35 @@ public:
     GLLF(int p = APERIODIC): LLF(p) {}
     GLLF(const Microsecond & d, const Microsecond & wcet, const Microsecond & p = SAME, const Microsecond & c = UNKNOWN, unsigned int cpu = ANY)
     : LLF(d, wcet, p, c, cpu) {}
+
+public:
+    static const unsigned int HEADS = Traits<Machine>::CPUS;
+
+};
+
+class PLLF: public LLF
+{
+public:
+    PLLF(int p = APERIODIC): LLF(p), _queue(_next_cpu) {
+        _next_cpu = (_next_cpu + 1) % CPU::cores();
+    }
+
+    PLLF(const Microsecond & d, const Microsecond & wcet, const Microsecond & p = SAME, const Microsecond & c = UNKNOWN, unsigned int cpu = ANY)
+    : LLF(d, wcet, p, c, (cpu == ANY) ? _next_cpu : cpu), _queue((cpu == ANY) ? _next_cpu : cpu) {
+        if (cpu == ANY) {
+            _next_cpu = (_next_cpu + 1) % CPU::cores();
+        }
+    }    
+
+    unsigned int queue() const { return _queue; }
+
+private:
+    unsigned int _queue;
+    static volatile unsigned int _next_cpu;
+
+public:
+    static const unsigned int QUEUES = Traits<Machine>::CPUS;
+
 };
 
 __END_SYS
@@ -278,6 +310,10 @@ __BEGIN_UTIL
 template<typename T>
 class Scheduling_Queue<T, GLLF>:
 public Multihead_Scheduling_List<T> {};
+
+template<typename T>
+class Scheduling_Queue<T, PLLF>:
+public Scheduling_Multilist<T> {};
 
 __END_UTIL
 

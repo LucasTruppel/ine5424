@@ -45,6 +45,8 @@ void LLF::update(Event event) {
     }
 }
 
+volatile unsigned int PLLF::_next_cpu = 0;
+
 // Since the definition of FCFS above is only known to this unit, forcing its instantiation here so it gets emitted in scheduler.o for subsequent linking with other units is necessary.
 template FCFS::FCFS<>(int p);
 

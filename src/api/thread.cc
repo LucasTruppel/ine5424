@@ -48,8 +48,13 @@ void Thread::constructor_epilogue(Log_Addr entry, unsigned int stack_size)
     if((_state != READY) && (_state != RUNNING))
         _scheduler.suspend(this);
 
-    if(preemptive && (_state == READY) && (_link.rank() != IDLE))
-        reschedule_all_cpus();
+    if(preemptive && (_state == READY) && (_link.rank() != IDLE)) {
+        if (multicore && Criterion::global) {
+            reschedule_all_cpus();
+        } else {
+            reschedule(criterion().queue());
+        }
+    }
 
     unlock();
 }
@@ -110,6 +115,9 @@ void Thread::priority(const Criterion & c)
 
     db<Thread>(TRC) << "Thread::priority(this=" << this << ",prio=" << c << ")" << endl;
 
+    unsigned int current_cpu = criterion().queue();
+    unsigned int next_cpu = c.queue();
+
     if(_state != RUNNING) { // reorder the scheduling queue
         _scheduler.remove(this);
         _link.rank(c);
@@ -117,8 +125,21 @@ void Thread::priority(const Criterion & c)
     } else
         _link.rank(c);
 
-    if(preemptive)
-        reschedule();
+    if(preemptive) {
+        if (multicore) {
+            if (current_cpu != CPU::id()) {
+                reschedule(current_cpu);
+            }
+            if (next_cpu != CPU::id() && current_cpu != next_cpu) {
+                reschedule(next_cpu);
+            }
+            if (current_cpu == CPU::id() || next_cpu == CPU::id()) {
+                reschedule();
+            }
+        } else {
+            reschedule();
+        }
+    }
 
     unlock();
 }
@@ -224,8 +245,14 @@ void Thread::resume()
         _state = READY;
         _scheduler.resume(this);
 
-        if(preemptive)
-            reschedule_all_cpus();
+        if (preemptive) {
+            if (multicore && Criterion::global) {
+                reschedule_all_cpus();
+            } else {
+                reschedule(criterion().queue());
+            }
+        }  
+
     } else
         db<Thread>(WRN) << "Resume called for unsuspended object!" << endl;
 
@@ -304,8 +331,13 @@ void Thread::wakeup(Queue * q)
         t->_waiting = 0;
         _scheduler.resume(t);
 
-        if(preemptive)
-            reschedule_all_cpus();
+        if (preemptive) {
+            if (multicore && Criterion::global) {
+                reschedule_all_cpus();
+            } else {
+                reschedule(t->criterion().queue());
+            }
+        }
     }
 }
 
@@ -316,16 +348,43 @@ void Thread::wakeup_all(Queue * q)
 
     assert(locked()); // locking handled by caller
 
+    bool reschedule_cpu[CPU::cores()];
+    for(unsigned int i = 0; i < CPU::cores(); i++) {
+        reschedule_cpu[i] = false;
+    }
+
     if(!q->empty()) {
         while(!q->empty()) {
             Thread * t = q->remove()->object();
             t->_state = READY;
             t->_waiting = 0;
             _scheduler.resume(t);
+
+            reschedule_cpu[t->criterion().queue()] = true;
         }
 
-        if(preemptive)
-            reschedule_all_cpus();
+        if (preemptive) {
+            if (multicore && Criterion::global) {
+                reschedule_all_cpus();
+                return;
+            } 
+
+            if (multicore && Criterion::partitioned) {
+                for(unsigned int i = 0; i < CPU::cores(); i++) {
+                    if (reschedule_cpu[i] && i != CPU::id()) {
+                        reschedule(i);
+                    }
+                }
+                if (reschedule_cpu[CPU::id()]) {
+                    reschedule();
+                }
+                return; 
+            } 
+            
+            if (!multicore) {
+                reschedule();
+            }
+        }
     }
 }
 
