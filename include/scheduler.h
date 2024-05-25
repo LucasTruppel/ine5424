@@ -141,8 +141,10 @@ public:
     }
 
     void restore_priority() {
-        _priority = _frozen_priority;
-        _protocol_applied = false;
+        if (_protocol_applied) {
+            _priority = _frozen_priority;
+            _protocol_applied = false;
+        }
     }
 
     bool protocol_applied() const { return _protocol_applied; }

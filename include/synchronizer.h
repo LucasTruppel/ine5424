@@ -67,7 +67,7 @@ protected:
         bool was_applied = false;
         Thread* current_thread = Thread::running();
         for (int i = 0; i < _size; i++) {
-            if (current_thread->priority() < _thread_array[i]->priority()) {
+            if ((_thread_array[i] != nullptr) && (current_thread->priority() < _thread_array[i]->priority())) {
                 was_applied = true;
                 _thread_array[i]->apply_new_priority(get_new_priority(current_thread));
                 db<Synchronizer>(INF) << "\nPriority inversion protocol applied!";
