@@ -191,18 +191,26 @@ public:
 class Real_Time_Scheduler_Common: public Priority
 {
 protected:
-    Real_Time_Scheduler_Common(int p): Priority(p), _deadline(0), _period(0), _capacity(0) {} // aperiodic
+    typedef Timer_Common::Tick Tick;
+
+protected:
+    Real_Time_Scheduler_Common(int p): Priority(p), _period(0), _deadline(0), _capacity(0) {} // aperiodic
     Real_Time_Scheduler_Common(int i, const Microsecond & d, const Microsecond & p, const Microsecond & c)
-    : Priority(i), _deadline(d), _period(p), _capacity(c) {}
+    : Priority(i), _period(ticks(p)), _deadline(ticks(d ? d : p)), _capacity(ticks(c)) {}
 
 public:
-    const Microsecond period() { return _period; }
-    void period(const Microsecond & p) { _period = p; }
+    Microsecond period() { return time(_period); }
+    Microsecond deadline() { return time(_deadline); }
+    Microsecond capacity() { return time(_capacity); }
 
-public:
-    Microsecond _deadline;
-    Microsecond _period;
-    Microsecond _capacity;
+protected:
+    Tick ticks(Microsecond time);
+    Microsecond time(Tick ticks);
+
+protected:
+    Tick _period;
+    Tick _deadline;
+    Tick _capacity;
 };
 
 // Rate Monotonic
@@ -250,8 +258,6 @@ public:
 
 class LLF: public Real_Time_Scheduler_Common
 {
-private:
-    typedef Timer_Common::Tick Tick;
 
 public:
     static const bool timed = true;
@@ -259,13 +265,12 @@ public:
     static const bool preemptive = true;
 
 public:
-    LLF(int p = APERIODIC): Real_Time_Scheduler_Common(p), _wcet(UNKNOWN) {}
-    LLF(const Microsecond & d, const Microsecond & wcet, const Microsecond & p = SAME, const Microsecond & c = UNKNOWN, unsigned int cpu = ANY);
+    LLF(int p = APERIODIC): Real_Time_Scheduler_Common(p) {}
+    LLF(const Microsecond & d, const Microsecond & p = SAME, const Microsecond & c = UNKNOWN);
 
     void update(Event event = NONE);
 
-public:
-    Microsecond _wcet;
+protected:
     Tick _exec_start = 0U;
 
 };
@@ -275,7 +280,7 @@ class GLLF: public LLF
 public:
     GLLF(int p = APERIODIC): LLF(p) {}
     GLLF(const Microsecond & d, const Microsecond & wcet, const Microsecond & p = SAME, const Microsecond & c = UNKNOWN, unsigned int cpu = ANY)
-    : LLF(d, wcet, p, c, cpu) {}
+    : LLF(d, p, c) {}
 
 public:
     static const unsigned int HEADS = Traits<Machine>::CPUS;
@@ -292,8 +297,8 @@ public:
         _lock.release();
     }
 
-    PLLF(const Microsecond & d, const Microsecond & wcet, const Microsecond & p = SAME, const Microsecond & c = UNKNOWN, unsigned int cpu = ANY)
-    : LLF(d, wcet, p, c, cpu) {
+    PLLF(const Microsecond & d, const Microsecond & p = SAME, const Microsecond & c = UNKNOWN, unsigned int cpu = ANY)
+    : LLF(d, p, c) {
         if (cpu == ANY) {
             _lock.acquire();
             _queue = _next_cpu;

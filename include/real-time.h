@@ -62,8 +62,8 @@ protected:
 
 public:
     struct Configuration: public Thread::Configuration {
-        Configuration(const Microsecond & p, const Microsecond & d = SAME, const Microsecond & cap = UNKNOWN, const Microsecond & act = NOW, const unsigned int n = INFINITE, const State & s = READY, const Criterion & c = NORMAL, unsigned int ss = STACK_SIZE)
-        : Thread::Configuration(s, c, ss), period(p), deadline(d == SAME ? p : d), capacity(cap), activation(act), times(n) {}
+        Configuration(const Microsecond & p, const Microsecond & d = SAME, const Microsecond & cap = UNKNOWN, const Microsecond & act = NOW, const unsigned int n = INFINITE, const State & s = READY, unsigned int ss = STACK_SIZE)
+        : Thread::Configuration(s, Criterion(p, d, cap), ss), period(p), deadline(d == SAME ? p : d), capacity(cap), activation(act), times(n) {}
 
         Microsecond period;
         Microsecond deadline;
@@ -80,7 +80,7 @@ public:
 
     template<typename ... Tn>
     Periodic_Thread(const Configuration & conf, int (* entry)(Tn ...), Tn ... an)
-    : Thread(Thread::Configuration(SUSPENDED, (conf.criterion != NORMAL) ? conf.criterion : Criterion(conf.period), conf.stack_size), entry, an ...),
+    : Thread(Thread::Configuration(SUSPENDED, conf.criterion, conf.stack_size), entry, an ...),
       _semaphore(0), _handler(&_semaphore, this), _alarm(conf.period, &_handler, conf.times) {
         if((conf.state == READY) || (conf.state == RUNNING)) {
             _state = SUSPENDED;

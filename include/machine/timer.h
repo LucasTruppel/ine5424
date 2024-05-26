@@ -39,6 +39,10 @@ public:
     void frequency(const Hertz & f);
 
     void handler(const Handler & handler);
+
+    static Microsecond period(Hertz frequency) { return Microsecond(1000000) / Microsecond(frequency); }
+    static Microsecond time(Tick ticks, Hertz frequency) { return Microsecond(ticks) * period(frequency); }
+    static Tick ticks(Microsecond time, Hertz frequency) { return (time + period(frequency) / 2) / period(frequency); }
 };
 
 __END_SYS

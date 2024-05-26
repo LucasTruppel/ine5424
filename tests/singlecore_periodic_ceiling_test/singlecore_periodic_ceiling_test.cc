@@ -9,6 +9,8 @@ using namespace EPOS;
 const unsigned int iterations = 10;
 const unsigned int period_a = 100; // ms
 const unsigned int period_c = 90; // ms
+const unsigned int wcet_a = 50; // ms
+const unsigned int wcet_c = 80; // ms
 
 int func_a();
 int func_b();
@@ -27,8 +29,8 @@ int main() {
 
     semaphore = new Semaphore(1);
 
-    thread_a = new Periodic_Thread(RTConf(period_a * 1000, 0, 0, 0, iterations), &func_a);
-    thread_c = new Periodic_Thread(RTConf(period_c * 1000, 0, 0, 0, iterations), &func_c);
+    thread_a = new Periodic_Thread(RTConf(period_a * 1000, period_a * 1000, wcet_a * 1000, 0, iterations), &func_a);
+    thread_c = new Periodic_Thread(RTConf(period_c * 1000, period_c * 1000, wcet_c * 1000, 0, iterations), &func_c);
 
     int status_a = thread_a->join();
     int status_c = thread_c->join();
@@ -52,9 +54,9 @@ int func_a()
         while (thread_a->priority() != Criterion::CEILING) {
             thread_a->yield();
         }
-        cout << "\n" << "a" << "\t[p(A)=" << thread_a->priority() << ", p(C)=" << thread_c->priority() << "]";
+        cout << "\n" << "a" << "\t[p(A)=" << thread_a->priority() << ", p(C)=" << thread_c->priority() << "] Ceiling applied";
         semaphore->v();
-        cout << "\n" << "a" << "\t[p(A)=" << thread_a->priority() << ", p(C)=" << thread_c->priority() << "]";
+        cout << "\n" << "a" << "\t[p(A)=" << thread_a->priority() << ", p(C)=" << thread_c->priority() << "] Restored priority";
     } while (Periodic_Thread::wait_next());
     return 'A';
 }

@@ -30,8 +30,8 @@ int main() {
 
     semaphore = new Semaphore(1);
 
-    thread_a = new Periodic_Thread(RTConf(period_a * 1000, 0, 0, 0, iterations, Thread::READY, Criterion(period_a * 1000, wcet_a * 1000)), &func_a);
-    thread_c = new Periodic_Thread(RTConf(period_c * 1000, 0, 0, 0, iterations, Thread::READY, Criterion(period_c * 1000, wcet_c * 1000)), &func_c);
+    thread_a = new Periodic_Thread(RTConf(period_a * 1000, period_a * 1000, wcet_a * 1000, 0, iterations), &func_a);
+    thread_c = new Periodic_Thread(RTConf(period_c * 1000, period_c * 1000, wcet_c * 1000, 0, iterations), &func_c);
 
     all_created = true;
 
