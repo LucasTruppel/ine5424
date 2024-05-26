@@ -117,6 +117,8 @@ public:
 
 protected:
     Statistics _statistics;
+
+    static Simple_Spin _lock;
 };
 
 // Priority (static and dynamic)
@@ -283,14 +285,22 @@ public:
 class PLLF: public LLF
 {
 public:
-    PLLF(int p = APERIODIC): LLF(p), _queue(_next_cpu) {
-        _next_cpu = (_next_cpu + 1) % CPU::cores();
+    PLLF(int p = APERIODIC): LLF(p) {
+        _lock.acquire();
+        _queue = _next_cpu;
+        _next_cpu = (_next_cpu + 1) % Traits<Machine>::CPUS;
+        _lock.release();
     }
 
     PLLF(const Microsecond & d, const Microsecond & wcet, const Microsecond & p = SAME, const Microsecond & c = UNKNOWN, unsigned int cpu = ANY)
-    : LLF(d, wcet, p, c, (cpu == ANY) ? _next_cpu : cpu), _queue((cpu == ANY) ? _next_cpu : cpu) {
+    : LLF(d, wcet, p, c, cpu) {
         if (cpu == ANY) {
-            _next_cpu = (_next_cpu + 1) % CPU::cores();
+            _lock.acquire();
+            _queue = _next_cpu;
+            _next_cpu = (_next_cpu + 1) % Traits<Machine>::CPUS;
+            _lock.release();
+        } else {
+            _queue = cpu;
         }
     }    
 

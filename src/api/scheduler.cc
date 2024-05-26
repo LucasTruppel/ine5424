@@ -5,6 +5,8 @@
 
 __BEGIN_SYS
 
+Simple_Spin Scheduling_Criterion_Common::_lock;
+
 // The following Scheduling Criteria depend on Alarm, which is not available at scheduler.h
 template <typename ... Tn>
 FCFS::FCFS(int p, Tn & ... an): Priority((p == IDLE) ? IDLE : Alarm::elapsed()) {}
