@@ -9,7 +9,7 @@ Timer * Timer::_channels[CHANNELS];
 
 void Timer::int_handler(Interrupt_Id i)
 {
-    // db<Thread>(WRN) << "TIME INTERRUPTION!." << endl;
+    // db<Thread>(INF) << "TIME INTERRUPTION!" << endl;
 
     if((CPU::id() == 0) && _channels[ALARM] && (--_channels[ALARM]->_current[0] <= 0)) {
         _channels[ALARM]->_current[0] = _channels[ALARM]->_initial;

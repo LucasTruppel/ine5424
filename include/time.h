@@ -162,7 +162,6 @@ private:
 };
 
 class Chronometer: public IF<Traits<TSC>::enabled, TSC_Chronometer, Alarm_Chronometer>::Result {};
-// class Chronometer: public IF<Traits<TSC>::enabled && !Traits<Machine>::multicore, TSC_Chronometer, Alarm_Chronometer>::Result {}
 __END_SYS
 
 #endif

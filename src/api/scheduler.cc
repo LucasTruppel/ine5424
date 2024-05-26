@@ -29,8 +29,6 @@ LLF::LLF(const Microsecond & d, const Microsecond & wcet, const Microsecond & p,
 
 void LLF::update(Event event) {
     if (event & PERIOD_START) {
-        db<Thread>(TRC) << "###" << endl;
-
         if (protocol_applied() && is_periodic(_frozen_priority))
             _frozen_priority = Alarm::elapsed() + _deadline - _wcet;
         else if(!protocol_applied() && is_periodic(_priority))
@@ -44,6 +42,7 @@ void LLF::update(Event event) {
 
     } else if (event & SCHEDULED) {
         _exec_start = Alarm::elapsed();
+        
     }
 }
 
