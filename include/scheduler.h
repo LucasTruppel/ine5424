@@ -117,6 +117,8 @@ public:
 
 protected:
     Statistics _statistics;
+
+    static Simple_Spin _lock;
 };
 
 // Priority (static and dynamic)
@@ -128,32 +130,61 @@ class Priority: public Scheduling_Criterion_Common
 
 public:
     template <typename ... Tn>
-    Priority(int p = NORMAL, Tn & ... an): _priority(p) {}
+    Priority(int p = NORMAL, Tn & ... an): _priority(p) {
+        _frozen_priority_list = new int[max_depth_of_nested_semaphores];
+        for (int i = 0; i < max_depth_of_nested_semaphores; i++) {
+            _frozen_priority_list[i] = 0;
+        }
+    }
+
+    ~Priority() {
+        delete[] _frozen_priority_list;
+    }
 
     operator const volatile int() const volatile { return _priority; }
 
-    void apply_new_priority(int new_priority) {
-        if (!_protocol_applied) {
+    void apply_new_priority(int new_priority, bool change_frozen_priority = true) {
+        
+        /*if (!_protocol_applied) {
             _frozen_priority = _priority;
         }
         _priority = new_priority;
         _protocol_applied = true;
+        } */
+           
+        if (change_frozen_priority) {
+            _frozen_priority_list[_frozen_priority_list_index] = _priority;
+            _frozen_priority_list_index++;
+        }
+        _priority = new_priority;
     }
+
+        
 
     void restore_priority() {
-        _priority = _frozen_priority;
-        _protocol_applied = false;
+        /* if (_protocol_applied) {
+            _priority = _frozen_priority;
+            _protocol_applied = false;
+        } */
+        _frozen_priority_list_index--;
+        _priority = _frozen_priority_list[_frozen_priority_list_index];
+        _frozen_priority_list[_frozen_priority_list_index] = 0;
+
     }
 
-    bool protocol_applied() const { return _protocol_applied; }
+    bool protocol_applied() const { return _frozen_priority_list_index; }
 
     static unsigned int current_head() { return CPU::id(); }
     static unsigned int current_queue() { return CPU::id(); }
 
 protected:
     volatile int _priority;
-    volatile int _frozen_priority;
-    volatile bool _protocol_applied = false; // Priority Inversion Protocol. Used by synchronizer.h
+    // volatile int _frozen_priority;
+    // volatile bool _protocol_applied = false; // Priority Inversion Protocol. Used by synchronizer.h
+
+    volatile int* _frozen_priority_list;
+    volatile unsigned int _frozen_priority_list_index = 0;
+    static const int max_depth_of_nested_semaphores = Traits<Synchronizer>::max_depth_of_nested_semaphores;
 };
 
 // Round-Robin
@@ -281,14 +312,22 @@ public:
 class PLLF: public LLF
 {
 public:
-    PLLF(int p = APERIODIC): LLF(p), _queue(_next_cpu) {
-        _next_cpu = (_next_cpu + 1) % CPU::cores();
+    PLLF(int p = APERIODIC): LLF(p) {
+        _lock.acquire();
+        _queue = _next_cpu;
+        _next_cpu = (_next_cpu + 1) % Traits<Machine>::CPUS;
+        _lock.release();
     }
 
     PLLF(const Microsecond & d, const Microsecond & wcet, const Microsecond & p = SAME, const Microsecond & c = UNKNOWN, unsigned int cpu = ANY)
-    : LLF(d, wcet, p, c, (cpu == ANY) ? _next_cpu : cpu), _queue((cpu == ANY) ? _next_cpu : cpu) {
+    : LLF(d, wcet, p, c, cpu) {
         if (cpu == ANY) {
-            _next_cpu = (_next_cpu + 1) % CPU::cores();
+            _lock.acquire();
+            _queue = _next_cpu;
+            _next_cpu = (_next_cpu + 1) % Traits<Machine>::CPUS;
+            _lock.release();
+        } else {
+            _queue = cpu;
         }
     }    
 

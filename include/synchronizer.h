@@ -13,6 +13,7 @@ class Synchronizer_Common
 {
 protected:
     static const bool multicore = Traits<Machine>::multicore;
+    static const int max_depth_of_nested_semaphores = Traits<Synchronizer>::max_depth_of_nested_semaphores;
     
     typedef Thread::Queue Queue;
     typedef Thread::Criterion Criterion;
@@ -58,6 +59,9 @@ protected:
             }
         }
 
+        current_thread->_synch_list[current_thread->_synch_list_index] = (void*) this;
+        current_thread->_synch_list_index++;
+
     }
 
     void apply_new_priority() {
@@ -67,9 +71,19 @@ protected:
         bool was_applied = false;
         Thread* current_thread = Thread::running();
         for (int i = 0; i < _size; i++) {
-            if (current_thread->priority() < _thread_array[i]->priority()) {
+            if ((_thread_array[i] != nullptr) && (current_thread->priority() < _thread_array[i]->priority())) {
+
+                bool already_applied = false;
+                if (_thread_array[i]->_synch_list[current_thread->_synch_list_index - 1] == (void*) this) {
+                    already_applied = true;
+                } else {
+                    current_thread->_synch_list[current_thread->_synch_list_index] = (void*) this;
+                    current_thread->_synch_list_index++;
+                }
+                
                 was_applied = true;
-                _thread_array[i]->apply_new_priority(get_new_priority(current_thread));
+                _thread_array[i]->apply_new_priority(get_new_priority(current_thread), !already_applied);
+
                 db<Synchronizer>(INF) << "\nPriority inversion protocol applied!";
             }
         }
@@ -86,9 +100,15 @@ protected:
         for (int i = 0; i < _size; i++) {
             if (_thread_array[i] == current_thread) {
                 if (current_thread->criterion().protocol_applied()) {
-                    _thread_array[i]->restore_priority();
+                    if (current_thread->_synch_list[current_thread->_synch_list_index - 1] == (void*) this) {
+                        current_thread->_synch_list_index--;
+                        current_thread->_synch_list[current_thread->_synch_list_index] = nullptr;
+                        current_thread->restore_priority();
+                    }
                 }
                 _thread_array[i] = nullptr;
+
+                
                 db<Synchronizer>(INF) << "\nPriority inversion protocol restored!";
                 return;
             }

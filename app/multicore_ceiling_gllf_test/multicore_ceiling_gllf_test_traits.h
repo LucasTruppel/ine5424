@@ -117,7 +117,7 @@ template<> struct Traits<Thread>: public Traits<Build>
     static const bool trace_idle = hysterically_debugged;
     static const bool simulate_capacity = false;
 
-    typedef PLLF Criterion;
+    typedef GLLF Criterion;
     static const unsigned int QUANTUM = 10000; // us
 };
 
@@ -130,6 +130,7 @@ template<> struct Traits<Synchronizer>: public Traits<Build>
 {
     static const bool enabled = Traits<System>::multithread;
     static const int priority_inversion_protocol = Priority_Inversion_Protocol::CEILING;
+    static const int max_depth_of_nested_semaphores = 1;
 };
 
 template<> struct Traits<Alarm>: public Traits<Build>

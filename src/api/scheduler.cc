@@ -5,6 +5,8 @@
 
 __BEGIN_SYS
 
+Simple_Spin Scheduling_Criterion_Common::_lock;
+
 // The following Scheduling Criteria depend on Alarm, which is not available at scheduler.h
 template <typename ... Tn>
 FCFS::FCFS(int p, Tn & ... an): Priority((p == IDLE) ? IDLE : Alarm::elapsed()) {}
@@ -14,10 +16,16 @@ EDF::EDF(const Microsecond & d, const Microsecond & p, const Microsecond & c, un
 void EDF::update(Event event) {
     if (event & PERIOD_START) {
         if (_priority == CEILING) {
-            if ((_frozen_priority >= PERIODIC) && (_frozen_priority < APERIODIC))
-                _frozen_priority = Alarm::elapsed() + _deadline;
-        } else if((_priority >= PERIODIC) && (_priority < APERIODIC))
-            _priority = Alarm::elapsed() + _deadline;
+            if (is_periodic(_frozen_priority_list[0])) {
+                //_frozen_priority = Alarm::elapsed() + _deadline;
+                for (volatile unsigned int i = 0; i < _frozen_priority_list_index; i++) {
+                    _frozen_priority_list[i] = Alarm::elapsed() + _deadline;
+                }
+            }
+        } else { 
+            if(is_periodic(_priority))
+                _priority = Alarm::elapsed() + _deadline;
+        }
     }
 }
 
@@ -29,16 +37,26 @@ void LLF::update(Event event) {
     if (event & PERIOD_START) {
         db<Thread>(TRC) << "###" << endl;
 
-        if (protocol_applied() && is_periodic(_frozen_priority))
-            _frozen_priority = Alarm::elapsed() + _deadline - _wcet;
-        else if(!protocol_applied() && is_periodic(_priority))
-            _priority = Alarm::elapsed() + _deadline - _wcet;
-
+        if (protocol_applied() && is_periodic(_frozen_priority_list[0])) {
+            // _frozen_priority = Alarm::elapsed() + _deadline - _wcet;
+            for (volatile unsigned int i = 0; i < _frozen_priority_list_index; i++) {
+                _frozen_priority_list[i] = Alarm::elapsed() + _deadline - _wcet;
+            }
+        } else { 
+            if(!protocol_applied() && is_periodic(_priority)) {
+                _priority = Alarm::elapsed() + _deadline - _wcet;
+            }
+        }
     } else if (event & LEAVE) {
-        if (protocol_applied() && is_periodic(_frozen_priority)) 
-            _frozen_priority += Alarm::elapsed() - _exec_start;
-        else if(!protocol_applied() && is_periodic(_priority))
-            _priority += Alarm::elapsed() - _exec_start;
+        if (protocol_applied() && is_periodic(_frozen_priority_list[0])) {
+            //_frozen_priority += Alarm::elapsed() - _exec_start;
+            for (volatile unsigned int i = 0; i < _frozen_priority_list_index; i++) {
+                _frozen_priority_list[i] += Alarm::elapsed() - _exec_start;
+            }
+        } else { 
+            if(!protocol_applied() && is_periodic(_priority))
+                _priority += Alarm::elapsed() - _exec_start;
+        }
 
     } else if (event & SCHEDULED) {
         _exec_start = Alarm::elapsed();

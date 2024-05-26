@@ -30,6 +30,11 @@ void Thread::constructor_prologue(unsigned int stack_size)
     _scheduler.insert(this);
 
     _stack = new (SYSTEM) char[stack_size];
+
+     _synch_list = new void*[max_depth_of_nested_semaphores];
+    for (int i = 0; i < max_depth_of_nested_semaphores; i++) {
+        _synch_list[i] = nullptr;
+    }
 }
 
 
@@ -102,6 +107,7 @@ Thread::~Thread()
 
     unlock();
 
+    delete[] _synch_list;
     delete _stack;
 }
 
@@ -144,24 +150,24 @@ void Thread::priority(const Criterion & c)
     unlock();
 }
 
-void Thread::apply_new_priority(int new_priority)
+void Thread::apply_new_priority(int new_priority, bool change_frozen_priority)
 {
     switch(_state) {
     case RUNNING:
         assert(multicore);
-        criterion().apply_new_priority(new_priority);
+        criterion().apply_new_priority(new_priority, change_frozen_priority);
         break;
     case READY:
         _scheduler.remove(this);
-        criterion().apply_new_priority(new_priority);
+        criterion().apply_new_priority(new_priority, change_frozen_priority);
         _scheduler.insert(this);
         break;
     case SUSPENDED:
-        criterion().apply_new_priority(new_priority);
+        criterion().apply_new_priority(new_priority, change_frozen_priority);
         break;
     case WAITING:
         _waiting->remove(&_link);
-        criterion().apply_new_priority(new_priority);
+        criterion().apply_new_priority(new_priority, change_frozen_priority);
         _waiting->insert(&_link);
         break;
     case FINISHING:

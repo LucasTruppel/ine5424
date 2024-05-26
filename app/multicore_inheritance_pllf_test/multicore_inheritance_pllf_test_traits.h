@@ -130,6 +130,7 @@ template<> struct Traits<Synchronizer>: public Traits<Build>
 {
     static const bool enabled = Traits<System>::multithread;
     static const int priority_inversion_protocol = Priority_Inversion_Protocol::INHERITANCE;
+    static const int max_depth_of_nested_semaphores = 1;
 };
 
 template<> struct Traits<Alarm>: public Traits<Build>

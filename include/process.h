@@ -38,6 +38,8 @@ protected:
     static const unsigned int QUANTUM = Traits<Thread>::QUANTUM;
     static const unsigned int STACK_SIZE = Traits<Application>::STACK_SIZE;
 
+    static const int max_depth_of_nested_semaphores = Traits<Synchronizer>::max_depth_of_nested_semaphores;
+
     typedef CPU::Log_Addr Log_Addr;
     typedef CPU::Context Context;
 
@@ -91,7 +93,7 @@ public:
 
     const volatile Criterion & priority() const { return _link.rank(); }
     void priority(const Criterion & p);
-    void apply_new_priority(int new_priority);
+    void apply_new_priority(int new_priority, bool change_frozen_priority = true);
     void restore_priority();
 
     int join();
@@ -167,6 +169,8 @@ protected:
     Thread * volatile _joining;
     Queue::Element _link;
     Microsecond _exec_start = 0U;
+    void** _synch_list;
+    unsigned int _synch_list_index = 0;
 
     static bool _not_booting;
     static volatile unsigned int _thread_count;
