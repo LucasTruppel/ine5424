@@ -64,35 +64,87 @@ protected:
         if (priority_inversion_protocol == Priority_Inversion_Protocol::NONE)
             return;
 
+        bool reschedule_cpu[CPU::cores()];
+        for(unsigned int i = 0; i < CPU::cores(); i++) {
+            reschedule_cpu[i] = false;
+        }
+
         bool was_applied = false;
-        Thread* current_thread = Thread::running();
+        Thread* running_thread = Thread::running();
         for (int i = 0; i < _size; i++) {
-            if ((_thread_array[i] != nullptr) && (current_thread->priority() < _thread_array[i]->priority())) {
+            Thread* thread = _thread_array[i];
+            if ((thread != nullptr) && (running_thread->priority() < thread->priority())) {
                 was_applied = true;
-                _thread_array[i]->apply_new_priority(get_new_priority(current_thread));
+                reschedule_cpu[thread->criterion().queue()] = true;
+                thread->apply_new_priority(get_new_priority(running_thread));
                 db<Synchronizer>(INF) << "\nPriority inversion protocol applied!";
             }
         }
-        if (multicore && was_applied)
-            current_thread->reschedule_all_cpus(false);
-        return;
+
+        if (!was_applied) {
+            return;
+        }
+
+        if (multicore && Criterion::global) {
+            Thread::reschedule_all_cpus(false);
+            return;
+        } 
+
+        if (multicore && Criterion::partitioned) {
+            for(unsigned int i = 0; i < CPU::cores(); i++) {
+                if (reschedule_cpu[i] && i != CPU::id()) {
+                    Thread::reschedule(i);
+                }
+            }
+            return; 
+        }
     }
 
     void restore_priority() {
         if (priority_inversion_protocol == Priority_Inversion_Protocol::NONE)
             return;
 
-        Thread* current_thread = Thread::running();
+        bool reschedule_cpu[CPU::cores()];
+        for(unsigned int i = 0; i < CPU::cores(); i++) {
+            reschedule_cpu[i] = false;
+        }
+
+        bool was_restored = false;
+        Thread* running_thread = Thread::running();
         for (int i = 0; i < _size; i++) {
-            if (_thread_array[i] == current_thread) {
-                if (current_thread->criterion().protocol_applied()) {
-                    _thread_array[i]->restore_priority();
+            Thread* thread = _thread_array[i];
+            if (thread != nullptr) {
+                if (thread->criterion().protocol_applied()) {
+                    was_restored = true;
+                    reschedule_cpu[thread->criterion().queue()] = true;
+                    if (thread == running_thread) {
+                        thread->restore_priority();                    
+                    }
+                    db<Synchronizer>(INF) << "\nPriority inversion protocol restored!";
                 }
+            }
+            if (thread == running_thread) {
                 _thread_array[i] = nullptr;
-                db<Synchronizer>(INF) << "\nPriority inversion protocol restored!";
-                return;
             }
         }
+
+        if (!was_restored) {
+            return;
+        }
+
+        if (multicore && Criterion::global) {
+            Thread::reschedule_all_cpus(false);
+            return;
+        } 
+
+        if (multicore && Criterion::partitioned) {
+            for(unsigned int i = 0; i < CPU::cores(); i++) {
+                if (reschedule_cpu[i] && i != CPU::id()) {
+                    Thread::reschedule(i);
+                }
+            }
+            return; 
+        } 
     }
 
 private:

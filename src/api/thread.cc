@@ -126,7 +126,12 @@ void Thread::priority(const Criterion & c)
         _link.rank(c);
 
     if(preemptive) {
-        if (multicore) {
+
+        if (multicore && Criterion::global) {
+            reschedule_all_cpus();
+        }
+            
+        if (multicore && Criterion::partitioned) {
             if (current_cpu != CPU::id()) {
                 reschedule(current_cpu);
             }
@@ -136,7 +141,9 @@ void Thread::priority(const Criterion & c)
             if (current_cpu == CPU::id() || next_cpu == CPU::id()) {
                 reschedule();
             }
-        } else {
+        } 
+
+        if (!multicore) {
             reschedule();
         }
     }
@@ -171,7 +178,26 @@ void Thread::apply_new_priority(int new_priority)
 
 void Thread::restore_priority()
 {
-    criterion().restore_priority();
+    switch(_state) {
+    case RUNNING:
+        criterion().restore_priority();
+        break;
+    case READY:
+        _scheduler.remove(this);
+        criterion().restore_priority();
+        _scheduler.insert(this);
+        break;
+    case SUSPENDED:
+        criterion().restore_priority();
+        break;
+    case WAITING:
+        _waiting->remove(&_link);
+        criterion().restore_priority();
+        _waiting->insert(&_link);
+        break;
+    case FINISHING:
+        break;
+    }
 }
 
 int Thread::join()
