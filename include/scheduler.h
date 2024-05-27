@@ -284,6 +284,7 @@ public:
 
 public:
     static const unsigned int HEADS = Traits<Machine>::CPUS;
+    static const bool global = true;
 
 };
 
@@ -317,6 +318,7 @@ private:
 
 public:
     static const unsigned int QUEUES = Traits<Machine>::CPUS;
+    static const bool partitioned = true;
 
 };
 
